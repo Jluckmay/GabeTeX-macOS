@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The Settings window: General, Editor, Shortcuts and TeX. The selected pane is remembered (and set by
+/// The Settings window: General, Editor, Shortcuts, TeX and Zotero. The selected pane is remembered (and set by
 /// GabeTeX ▸ Keyboard Shortcuts…).
 struct SettingsView: View {
     enum Pane: String {
-        case general, editor, shortcuts, tex
+        case general, editor, shortcuts, tex, zotero
     }
 
     /// UserDefaults key of the selected pane.
@@ -25,6 +25,9 @@ struct SettingsView: View {
             }
             Tab("TeX", systemImage: "function", value: Pane.tex) {
                 TeXSettingsView()
+            }
+            Tab("Zotero", systemImage: "book", value: Pane.zotero) {
+                ZoteroSettingsView()
             }
         }
         .scenePadding()

@@ -649,3 +649,67 @@
 "Pages per section need a compiled PDF with SyncTeX data." = "As páginas por seção precisam de um PDF compilado com dados do SyncTeX.";
 "Pages come from SyncTeX after the last successful compile; ≈ marks a section that shares its page with the next one." = "As páginas vêm do SyncTeX após a última compilação bem-sucedida; ≈ marca uma seção que divide a página com a seguinte.";
 "Open a LaTeX document to see its statistics." = "Abra um documento LaTeX para ver as estatísticas dele.";
+
+/* ===== Auto-save ===== */
+"Auto-save" = "Salvamento Automático";
+"Save automatically" = "Salvar automaticamente";
+"Auto-save interval" = "Intervalo de salvamento";
+"Automatically saves open files with unsaved changes at regular intervals." = "Salva automaticamente os arquivos abertos com alterações não salvas em intervalos regulares.";
+"1 minute" = "1 minuto";
+"%@ minutes" = "%@ minutos";
+"%@ min %@ s" = "%@ min %@ s";
+
+/* ===== Appearance ===== */
+"Appearance" = "Aparência";
+"Accent Color" = "Cor de destaque";
+"Custom color" = "Cor personalizada";
+"Hex color" = "Cor hexadecimal";
+"Theme" = "Tema";
+"Language" = "Idioma";
+"System" = "Sistema";
+"Light" = "Claro";
+"Dark" = "Escuro";
+"Pink" = "Rosa";
+"Teal" = "Ciano";
+"Graphite" = "Grafite";
+
+/* ===== Spell check languages ===== */
+"Spell check languages" = "Idiomas da verificação ortográfica";
+"English" = "Inglês";
+"Português (Brasil)" = "Português (Brasil)";
+"English, Português (Brasil)" = "Inglês, Português (Brasil)";
+
+/* ===== TeX Program & Tectonic WASM ===== */
+"Program" = "Programa";
+"Program version" = "Versão do programa";
+"Program location" = "Local do programa";
+"Get TeX Live" = "Obter o TeX Live";
+"Get TinyTeX" = "Obter o TinyTeX";
+"Use Tectonic WASM compiler" = "Usar compilador Tectonic WASM";
+"– compile in browser, no TeX installation needed" = "– compilar no navegador, sem necessidade de instalação do TeX";
+"The active TeX source file is missing." = "O arquivo fonte TeX ativo está ausente.";
+
+/* ===== Security ===== */
+"Opening executable or script files (%@) is blocked for security." = "A abertura de arquivos executáveis ou de script (%@) é bloqueada por segurança.";
+
+/* ===== Zotero ===== */
+"Zotero" = "Zotero";
+"Refresh" = "Atualizar";
+"Zotero status" = "Status do Zotero";
+"Connected" = "Conectado";
+"Not connected" = "Não conectado";
+"Zotero local API is reachable at http://localhost:23119." = "A API local do Zotero está acessível em http://localhost:23119.";
+"Make sure Zotero is running and the local API is enabled." = "Certifique-se de que o Zotero está em execução e a API local está habilitada.";
+"Zotero Web API docs" = "Documentação da API Web do Zotero";
+"Collections" = "Coleções";
+"No collections found." = "Nenhuma coleção encontrada.";
+"Items" = "Itens";
+"No items found." = "Nenhum item encontrado.";
+"Selected items" = "Itens selecionados";
+"Export to BibTeX" = "Exportar para BibTeX";
+"Save zotero.bib…" = "Salvar zotero.bib…";
+"No BibTeX exported yet." = "Nenhum BibTeX exportado ainda.";
+"Export failed" = "Exportação falhou";
+"Unknown error" = "Erro desconhecido";
+"Connect to Zotero’s local API to browse your library and export citations as BibTeX. Save the .bib file in your project and reference it with \\bibliography{zotero} or \\addbibresource{zotero.bib}." = "Conecte-se à API local do Zotero para navegar pela sua biblioteca e exportar citações como BibTeX. Salve o arquivo .bib na pasta do seu projeto e referencie-o com \\bibliography{zotero} ou \\addbibresource{zotero.bib}.";
+
