@@ -129,8 +129,11 @@ func unitChecks() async {
         Check.expect(!LaTeXCompiler.isPackageFile("figs/plot") && !LaTeXCompiler.isPackageFile("chapters/nothere.tex") && !LaTeXCompiler.isPackageFile("nothere.tex"))
         let args = LaTeXCompiler.latexmkArguments(engine: .xelatex, outputDirectory: URL(fileURLWithPath: "/s/out/thesis"),
                                                   shellEscape: true, extra: ["-silent"], rootFileName: "main file.tex")
-        Check.equal(args, ["-xelatex", "-interaction=nonstopmode", "-file-line-error", "-synctex=1", "-f",
-                           "-e", "$bibtex_fudge = 0;", "-outdir=/s/out/thesis", "-shell-escape", "-silent", "main file.tex"])
+        Check.equal(args, ["-xelatex", "-interaction=nonstopmode", "-file-line-error", "-synctex=1",
+                           "-e", "$bibtex_fudge = 0; $max_repeat = 3;", "-outdir=/s/out/thesis", "-shell-escape", "-silent", "main file.tex"])
+        let safeArgs = LaTeXCompiler.latexmkArguments(engine: .pdflatex, outputDirectory: URL(fileURLWithPath: "/s/out"),
+                                                      shellEscape: false, extra: [], rootFileName: "main.tex")
+        Check.expect(safeArgs.contains("-no-shell-escape"), "-no-shell-escape added when shellEscape is false")
         Check.equal(LaTeXCompiler.biblatexLine(in: "\\documentclass{article}\n% \\usepackage{biblatex}\n\\usepackage[backend=biber]{biblatex}\n"), 3)
         Check.equal(LaTeXCompiler.missingFileLine(in: "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{thispackagedoesnotexist}\n", name: "thispackagedoesnotexist.sty"), 3)
         Check.equal(LaTeXCompiler.missingFileLine(in: "a\n\\input{chapters/nothere}\n", name: "chapters/nothere.tex"), 2)

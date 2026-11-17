@@ -40,7 +40,9 @@ extension ProjectWorkspace {
 
     private func validatedName(_ raw: String) -> String? {
         let name = raw.trimmingCharacters(in: .whitespacesAndNewlines)
-        if name.isEmpty || name.contains("/") || name == "." || name == ".." {
+        if name.isEmpty || name.contains("/") || name.contains("\0")
+            || name.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) })
+            || name == "." || name == ".." {
             present(title: String(localized: "Invalid name"), message: String(localized: "Names cannot be empty or contain “/”."))
             return nil
         }

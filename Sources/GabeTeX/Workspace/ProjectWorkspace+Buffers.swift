@@ -18,8 +18,15 @@ extension ProjectWorkspace {
     /// Extensions that open in their default app instead of the editor.
     static let externalExtensions: Set<String> = [
         "pdf", "png", "jpg", "jpeg", "gif", "tiff", "tif", "bmp", "heic", "eps", "svg", "ps", "ai", "psd", "webp", "ico", "icns",
-        "zip", "gz", "tar", "7z", "rar", "dmg", "key", "pages", "numbers", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
+        "zip", "gz", "tar", "7z", "rar", "key", "pages", "numbers", "doc", "docx", "xls", "xlsx", "ppt", "pptx",
         "odt", "mov", "mp4", "mp3", "wav", "dvi", "xdv"
+    ]
+
+    /// Executable and script extensions blocked from launching via NSWorkspace for security.
+    static let blockedExternalExtensions: Set<String> = [
+        "app", "command", "sh", "bash", "zsh", "bin", "pkg", "dmg", "py", "pl", "rb", "js", "scpt", "osa",
+        "workflow", "action", "exe", "bat", "cmd", "ps1", "vbs", "msi", "com", "scr", "pif", "hta", "cpl",
+        "jar", "reg", "url", "lnk", "wsf", "wsh"
     ]
 
     var currentBuffer: SourceBuffer? { currentFile.flatMap { buffers[$0] } }
@@ -96,14 +103,15 @@ extension ProjectWorkspace {
             url = lexical
         }
         if buffers[url] == nil {
-            if Self.externalExtensions.contains(url.pathExtension.lowercased()) {
-                NSWorkspace.shared.open(url)
+            let ext = url.pathExtension.lowercased()
+            if Self.externalExtensions.contains(ext) || ext == "dmg" {
+                openExternally(url)
                 return false
             }
             do {
                 try loadBuffer(url)
             } catch TextFileError.notText {
-                NSWorkspace.shared.open(url)
+                openExternally(url)
                 return false
             } catch {
                 present(title: String(localized: "Could not open “\(url.lastPathComponent)”"), message: error.localizedDescription)
@@ -128,6 +136,18 @@ extension ProjectWorkspace {
             }
         }
         return true
+    }
+
+    private func openExternally(_ url: URL) {
+        let ext = url.pathExtension.lowercased()
+        if Self.blockedExternalExtensions.contains(ext) {
+            present(
+                title: String(localized: "Could not open “\(url.lastPathComponent)”"),
+                message: String(localized: "Opening executable or script files (\(ext)) is blocked for security.")
+            )
+            return
+        }
+        NSWorkspace.shared.open(url)
     }
 
     /// Reads `url` (already a canonical key) into a new buffer.

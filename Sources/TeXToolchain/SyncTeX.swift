@@ -38,7 +38,7 @@ public struct SyncTeX: Sendable {
         let arguments = ["view", "-i", "\(line):\(max(column, 0)):\(shadowPath)", "-o", pdfURL.path]
         guard let output = try? await ProcessRunner.run(synctex, arguments: arguments,
                                                         environment: distribution.processEnvironment,
-                                                        timeout: .seconds(10)),
+                                                        timeout: .seconds(3)),
               !output.cancelled, !output.timedOut else { return [] }
         let records = Self.parseViewOutput(output.stdoutText)
         guard !records.isEmpty else { return [] }
@@ -61,7 +61,7 @@ public struct SyncTeX: Sendable {
         let arguments = ["edit", "-o", "\(page):\(Self.format(p.x)):\(Self.format(p.y)):\(pdfURL.path)"]
         guard let output = try? await ProcessRunner.run(synctex, arguments: arguments,
                                                         environment: distribution.processEnvironment,
-                                                        timeout: .seconds(10)),
+                                                        timeout: .seconds(3)),
               !output.cancelled, !output.timedOut,
               let record = Self.parseEditOutput(output.stdoutText),
               let url = mapper.projectURL(forShadowPath: record.input) else { return nil }
