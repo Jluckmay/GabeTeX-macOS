@@ -12,6 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         SystemCloseItemRemover.shared.start()
         // View ▸ Customize Touch Bar… (AppKit shows it only on Macs with a Touch Bar).
         NSApplication.shared.isAutomaticCustomizeTouchBarMenuItemEnabled = true
+        AppSettings.shared.applyAppearance()
     }
 
     func application(_ application: NSApplication, open urls: [URL]) {

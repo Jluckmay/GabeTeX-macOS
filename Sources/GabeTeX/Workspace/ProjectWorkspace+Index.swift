@@ -10,11 +10,27 @@ extension ProjectWorkspace {
 
     /// Called by the editor after every edit of `buffer` (after `noteEdit()`).
     func bufferDidChange(_ buffer: SourceBuffer) {
+        editVersion += 1
         updateWindowEdited()
         scheduleStructureLint(for: buffer)
         scheduleChkTeX(for: buffer)
         scheduleIndexRefresh()
         scheduleLiveCompile()
+        scheduleAutoSave()
+    }
+
+    /// Debounced automatic save of all dirty open tabs when `settings.autoSave` is enabled.
+    func scheduleAutoSave() {
+        debounceTasks["autoSave"]?.cancel()
+        guard settings.autoSave, hasUnsavedChanges else { return }
+        let ms = Int((min(180, max(0.2, settings.autoSaveInterval)) * 1000).rounded())
+        debounce("autoSave", after: .milliseconds(ms)) { [weak self] in
+            guard let self, self.settings.autoSave, !self.stopped else { return }
+            let dirty = self.dirtyURLs
+            guard !dirty.isEmpty else { return }
+            _ = self.saveBatch(dirty)
+            if self.hasUnsavedChanges { self.scheduleAutoSave() }
+        }
     }
 
     /// The engine used for compiling: `% !TEX program` > project setting > default.

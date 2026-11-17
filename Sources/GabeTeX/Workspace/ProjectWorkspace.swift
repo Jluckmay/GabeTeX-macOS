@@ -147,6 +147,7 @@ final class ProjectWorkspace {
     @ObservationIgnored var pathMapper: ShadowPathMapper?
     @ObservationIgnored var compileTask: Task<Void, Never>?
     @ObservationIgnored var compileGeneration = 0
+    @ObservationIgnored var editVersion = 0
     /// A live compile was requested while another compile was running: run exactly one more afterwards.
     @ObservationIgnored var rerunLiveAfterBuild = false
     /// Root and engine of the compile in flight.

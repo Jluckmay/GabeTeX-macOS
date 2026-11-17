@@ -370,6 +370,16 @@ public final class LaTeXTextView: NSTextView {
         }
         isContinuousSpellCheckingEnabled = configuration.spellChecking
         isGrammarCheckingEnabled = false
+        if configuration.spellChecking {
+            let langs = configuration.spellCheckingLanguages
+            if langs.count == 1, let single = langs.first {
+                let code = single == "pt-BR" ? "pt_BR" : single
+                NSSpellChecker.shared.automaticallyIdentifiesLanguages = false
+                NSSpellChecker.shared.setLanguage(code)
+            } else {
+                NSSpellChecker.shared.automaticallyIdentifiesLanguages = true
+            }
+        }
         if force || previous?.vimMode != configuration.vimMode {
             setVimEnabled(configuration.vimMode)
         }

@@ -50,7 +50,7 @@ struct WelcomeView: View {
     private var hero: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 24)
-            Image(nsImage: NSApp.applicationIconImage)
+            Image(nsImage: AppSettings.shared.appIconImage)
                 .resizable()
                 .interpolation(.high)
                 .frame(width: 104, height: 104)

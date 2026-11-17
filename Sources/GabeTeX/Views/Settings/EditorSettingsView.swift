@@ -42,6 +42,17 @@ struct EditorSettingsView: View {
                 Toggle("Wrap long lines", isOn: $settings.wrapLines)
                 Toggle("Highlight the current line", isOn: $settings.highlightCurrentLine)
                 Toggle("Check spelling while typing", isOn: $settings.spellChecking)
+                LabeledContent("Spell check languages") {
+                    Menu {
+                        spellLanguageButton("en", label: "English")
+                        spellLanguageButton("pt-BR", label: "Português (Brasil)")
+                    } label: {
+                        spellLanguagesLabel
+                    }
+                    .menuStyle(.button)
+                    .fixedSize()
+                }
+                .disabled(!settings.spellChecking)
             } header: {
                 Text("Display")
             }
@@ -75,6 +86,41 @@ struct EditorSettingsView: View {
             }
         }
         .formStyle(.grouped)
+    }
+
+    // MARK: Spell check languages
+
+    @ViewBuilder
+    private func spellLanguageButton(_ code: String, label: LocalizedStringKey) -> some View {
+        let selected = settings.spellCheckingLanguages.contains(code)
+        Button {
+            if selected {
+                settings.spellCheckingLanguages.removeAll { $0 == code }
+            } else {
+                settings.spellCheckingLanguages.append(code)
+            }
+        } label: {
+            if selected {
+                Label(label, systemImage: "checkmark")
+            } else {
+                Text(label)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var spellLanguagesLabel: some View {
+        let hasEn = settings.spellCheckingLanguages.contains("en")
+        let hasPt = settings.spellCheckingLanguages.contains("pt-BR")
+        if hasEn && hasPt {
+            Text("English, Português (Brasil)")
+        } else if hasEn {
+            Text("English")
+        } else if hasPt {
+            Text("Português (Brasil)")
+        } else {
+            Text("None")
+        }
     }
 
     // MARK: Preview

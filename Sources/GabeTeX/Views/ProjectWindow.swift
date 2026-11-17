@@ -25,6 +25,11 @@ struct ProjectWindow: View {
             .onDisappear { AppRouter.shared.projectWindowCount = max(0, AppRouter.shared.projectWindowCount - 1) }
             .onChange(of: toolchain.generation) { _, _ in workspace.toolchainDidChange() }
             .onChange(of: settings.liveCompile) { _, _ in workspace.liveCompileSettingChanged() }
+            .onChange(of: settings.autoSave) { _, _ in workspace.scheduleAutoSave() }
+            .onChange(of: settings.autoSaveInterval) { _, _ in workspace.scheduleAutoSave() }
+            .onChange(of: settings.useTectonicWasm) { _, enabled in
+                if enabled, toolchain.distribution == nil { workspace.toolchainDidChange() }
+            }
             .onChange(of: settings.chktexEnabled) { _, _ in workspace.applyChkTeXSetting() }
             .onChange(of: settings.pdfSyncTrigger) { _, trigger in workspace.preview.syncTrigger = trigger }
     }

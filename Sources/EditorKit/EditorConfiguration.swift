@@ -32,6 +32,7 @@ public struct EditorConfiguration: Equatable, Sendable {
     public var indentWidth: Int
     public var insertSpaces: Bool
     public var spellChecking: Bool
+    public var spellCheckingLanguages: [String]
     /// "Tab completes": Tab right after a completable prefix (`\com…`, inside `\ref{…}`, `\cite{…}`,
     /// `\begin{…}`, file and package arguments) opens the completion popup, or inserts the only candidate
     /// directly; anywhere else Tab keeps its usual behaviour (indent, next snippet field). Vim: insert mode only.
@@ -59,6 +60,7 @@ public struct EditorConfiguration: Equatable, Sendable {
         indentWidth: Int = 2,
         insertSpaces: Bool = true,
         spellChecking: Bool = false,
+        spellCheckingLanguages: [String] = ["en"],
         tabCompletes: Bool = true,
         completionAcceptKeys: CompletionAcceptKeys = .tabAndReturn,
         completionTrigger: KeyCombo? = EditorConfiguration.defaultCompletionTrigger
@@ -76,6 +78,7 @@ public struct EditorConfiguration: Equatable, Sendable {
         self.indentWidth = indentWidth
         self.insertSpaces = insertSpaces
         self.spellChecking = spellChecking
+        self.spellCheckingLanguages = spellCheckingLanguages
         self.tabCompletes = tabCompletes
         self.completionAcceptKeys = completionAcceptKeys
         self.completionTrigger = completionTrigger

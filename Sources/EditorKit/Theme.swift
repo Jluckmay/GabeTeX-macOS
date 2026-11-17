@@ -1,4 +1,5 @@
 import AppKit
+import Synchronization
 import TeXCore
 
 /// The editor's color palette. Every color is a dynamic `NSColor` that resolves against the drawing
@@ -81,6 +82,20 @@ public enum EditorTheme {
 
     // MARK: Chrome
 
+    private nonisolated static let customAccentRGB = Mutex<(r: CGFloat, g: CGFloat, b: CGFloat)?>(nil)
+
+    public static func setCustomAccentColor(_ color: NSColor?) {
+        let rgb = color?.usingColorSpace(.sRGB).map { ($0.redComponent, $0.greenComponent, $0.blueComponent) }
+        customAccentRGB.withLock { $0 = rgb }
+    }
+
+    private nonisolated static var activeAccentColor: NSColor {
+        if let rgb = customAccentRGB.withLock({ $0 }) {
+            return NSColor(srgbRed: rgb.r, green: rgb.g, blue: rgb.b, alpha: 1)
+        }
+        return NSColor.controlAccentColor
+    }
+
     /// Current-line band behind the text and in the gutter.
     public static let currentLine = NSColor(name: "GabeTeX.currentLine") { appearance in
         if appearance.isDark {
@@ -98,7 +113,7 @@ public enum EditorTheme {
     }
     /// Background of inactive snippet tab stops.
     public static let snippetPlaceholder = NSColor(name: "GabeTeX.snippetPlaceholder") { appearance in
-        NSColor.controlAccentColor.withAlphaComponent(appearance.isDark ? 0.22 : 0.14)
+        activeAccentColor.withAlphaComponent(appearance.isDark ? 0.22 : 0.14)
     }
     /// The soft accent-colored highlight behind a range the editor just jumped to (SyncTeX, navigation,
     /// `EditorController.reveal`). `intensity` (0…1) scales the alpha while the highlight fades out; the
@@ -112,13 +127,13 @@ public enum EditorTheme {
             case (false, true): 0.42
             case (true, true): 0.52
             }
-            return NSColor.controlAccentColor.withAlphaComponent(peak * level)
+            return activeAccentColor.withAlphaComponent(peak * level)
         }
     }
 
     /// The block caret of Vim normal mode.
     public static let blockCaret = NSColor(name: "GabeTeX.blockCaret") { appearance in
-        NSColor.controlAccentColor.withAlphaComponent(appearance.isDark ? 0.55 : 0.40)
+        activeAccentColor.withAlphaComponent(appearance.isDark ? 0.55 : 0.40)
     }
 
     // MARK: Helpers

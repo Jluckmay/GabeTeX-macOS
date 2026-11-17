@@ -17,6 +17,7 @@ struct GabeTeXApp: App {
         Window("Welcome to GabeTeX", id: "welcome") {
             WelcomeView()
                 .capturesWindowActions()
+                .appliesAppAppearance()
         }
         .windowStyle(.hiddenTitleBar)
         .windowBackgroundDragBehavior(.enabled)
@@ -27,6 +28,7 @@ struct GabeTeXApp: App {
         WindowGroup(id: "project", for: ProjectReference.self) { $reference in
             if let reference {
                 ProjectWindow(reference: reference)
+                    .appliesAppAppearance()
             }
         }
         .defaultSize(width: 1320, height: 840)
@@ -37,6 +39,7 @@ struct GabeTeXApp: App {
         WindowGroup(id: "pdf", for: PDFWindowReference.self) { $reference in
             if let reference {
                 DetachedPDFWindow(reference: reference)
+                    .appliesAppAppearance()
             }
         }
         .defaultSize(width: 760, height: 940)
@@ -45,6 +48,7 @@ struct GabeTeXApp: App {
         Window("New Project", id: "new-project") {
             NewProjectView()
                 .capturesWindowActions()
+                .appliesAppAppearance()
         }
         .windowResizability(.contentSize)
         .restorationBehavior(.disabled)
@@ -52,6 +56,23 @@ struct GabeTeXApp: App {
 
         Settings {
             SettingsView()
+                .appliesAppAppearance()
         }
+    }
+}
+
+private struct AppAppearanceModifier: ViewModifier {
+    private let settings = AppSettings.shared
+
+    func body(content: Content) -> some View {
+        content
+            .tint(settings.accentSwiftUIColor)
+            .environment(\.locale, settings.effectiveLocale)
+    }
+}
+
+private extension View {
+    func appliesAppAppearance() -> some View {
+        modifier(AppAppearanceModifier())
     }
 }
