@@ -17,6 +17,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN_DIR/GabeTeX" "$APP/Contents/MacOS/GabeTeX"
 cp "$ROOT/Support/Info.plist" "$APP/Contents/Info.plist"
 [ -f "$ROOT/Support/AppIcon.icns" ] && cp "$ROOT/Support/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+[ -f "$ROOT/Resources/tectonic-worker.js" ] && cp "$ROOT/Resources/tectonic-worker.js" "$APP/Contents/Resources/tectonic-worker.js"
 for lproj in "$ROOT"/Resources/*.lproj; do
   cp -R "$lproj" "$APP/Contents/Resources/"
 done

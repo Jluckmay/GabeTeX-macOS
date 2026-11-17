@@ -76,18 +76,23 @@ extension ProjectWorkspace {
         compileTask?.cancel()
         compileGeneration += 1
         let generation = compileGeneration
+        let compileEditVersion = editVersion
         inflightSignature = signature
         rerunLiveAfterBuild = false
         compileState = .compiling(purpose)
         compileTask = Task { [weak self] in
             guard let self else { return }
-            guard let compiler = await self.currentCompiler() else {
+            if let compiler = await self.currentCompiler() {
+                if Task.isCancelled { return }
+                let result = await compiler.compile(request)
+                self.finishCompile(result, purpose: purpose, generation: generation, compileEditVersion: compileEditVersion)
+            } else if self.settings.useTectonicWasm {
+                if Task.isCancelled { return }
+                let result = await TectonicWasmCompiler.shared.compile(request, projectFiles: self.allFiles)
+                self.finishCompile(result, purpose: purpose, generation: generation, compileEditVersion: compileEditVersion)
+            } else {
                 self.finishWithoutTeX(generation: generation)
-                return
             }
-            if Task.isCancelled { return }
-            let result = await compiler.compile(request)
-            self.finishCompile(result, purpose: purpose, generation: generation)
         }
     }
 
@@ -114,7 +119,7 @@ extension ProjectWorkspace {
         compileState = .toolError(String(localized: "No TeX distribution was found."))
     }
 
-    private func finishCompile(_ result: CompileResult, purpose: CompilePurpose, generation: Int) {
+    private func finishCompile(_ result: CompileResult, purpose: CompilePurpose, generation: Int, compileEditVersion: Int) {
         guard generation == compileGeneration else { return }
         compileTask = nil
         inflightSignature = nil
@@ -152,9 +157,11 @@ extension ProjectWorkspace {
 
         if purpose == .build, settings.syncAfterBuild, pdfURL != nil { forwardSearch(silent: true) }
         if rerunLiveAfterBuild {
-            // Edits arrived while this compile ran: one more run with the current text, right away.
             rerunLiveAfterBuild = false
-            startCompile(.live)
+            if result.status == .succeeded || compileEditVersion != editVersion {
+                // Edits arrived while this compile ran: one more run with the current text, right away.
+                startCompile(.live)
+            }
         }
     }
 

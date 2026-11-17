@@ -29,6 +29,13 @@ struct ProjectToolbar: ToolbarContent {
         ToolbarItem(placement: .primaryAction) { PreviewToggle() }
         ToolbarItem(placement: .primaryAction) { DetachPreviewToggle() }
         ToolbarItem(placement: .primaryAction) { IssuesToggle() }
+        ToolbarItem(placement: .primaryAction) {
+            SettingsLink {
+                Label("Settings", systemImage: "list.bullet.indent")
+            }
+            .help("Settings")
+            .accessibilityLabel("Settings")
+        }
     }
 }
 

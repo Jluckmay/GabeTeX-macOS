@@ -5,12 +5,14 @@ import TeXToolchain
 struct BannerStack: View {
     @Environment(ProjectWorkspace.self) private var workspace
     @Environment(ToolchainModel.self) private var toolchain
+    @Environment(AppSettings.self) private var settings
 
     var body: some View {
         let externalURLs = workspace.externalChanges.keys.sorted { $0.path < $1.path }
         let encodingURLs = workspace.encodingProblems.keys.sorted { $0.path < $1.path }
+        let showNoTeX = toolchain.hasLocated && toolchain.distribution == nil && !settings.useTectonicWasm
         VStack(spacing: 8) {
-            if toolchain.hasLocated && toolchain.distribution == nil {
+            if showNoTeX {
                 NoTeXBanner()
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
@@ -34,11 +36,12 @@ struct BannerStack: View {
         .animation(.smooth(duration: 0.25), value: workspace.packages.phase)
         .animation(.smooth(duration: 0.25), value: externalURLs)
         .animation(.smooth(duration: 0.25), value: encodingURLs)
-        .animation(.smooth(duration: 0.25), value: toolchain.hasLocated)
+        .animation(.smooth(duration: 0.25), value: showNoTeX)
     }
 
     private func bannerPadding(_ externalCount: Int) -> CGFloat {
-        let visible = (toolchain.hasLocated && toolchain.distribution == nil) || workspace.packages.phase != .idle || externalCount > 0
+        let visible = (toolchain.hasLocated && toolchain.distribution == nil && !settings.useTectonicWasm)
+            || workspace.packages.phase != .idle || externalCount > 0
         return visible ? 4 : 0
     }
 }

@@ -9,6 +9,7 @@ struct TeXSettingsView: View {
 
     var body: some View {
         Form {
+            programSection
             distributionSection
             if let distribution = toolchain.distribution {
                 toolsSection(distribution)
@@ -20,6 +21,24 @@ struct TeXSettingsView: View {
         }
         .formStyle(.grouped)
         .task { await toolchain.ensureLocated() }
+    }
+
+    // MARK: Program
+
+    private var programSection: some View {
+        Section("Program") {
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.1"
+            LabeledContent("Program version") {
+                Text(version).font(.system(.body, design: .monospaced))
+            }
+            LabeledContent("Program location") {
+                Text(Bundle.main.bundleURL.path)
+                    .font(.system(size: 11, design: .monospaced))
+                    .textSelection(.enabled)
+                    .lineLimit(2)
+                    .truncationMode(.middle)
+            }
+        }
     }
 
     // MARK: Distribution
@@ -58,10 +77,28 @@ struct TeXSettingsView: View {
                         .foregroundStyle(.orange)
                     Text("Install MacTeX to compile documents, or choose the folder that contains pdflatex below.")
                         .foregroundStyle(.secondary)
-                    Button("Get MacTeX") {
-                        if let url = URL(string: "https://tug.org/mactex/") { NSWorkspace.shared.open(url) }
+                    HStack(spacing: 8) {
+                        Button("Get MacTeX") {
+                            if let url = URL(string: "https://tug.org/mactex/") { NSWorkspace.shared.open(url) }
+                        }
+                        .buttonStyle(.glassProminent)
+                        Button("Get TeX Live") {
+                            if let url = URL(string: "https://tug.org/texlive/") { NSWorkspace.shared.open(url) }
+                        }
+                        .buttonStyle(.glass)
+                        Button("Get TinyTeX") {
+                            if let url = URL(string: "https://yihui.org/tinytex/") { NSWorkspace.shared.open(url) }
+                        }
+                        .buttonStyle(.glass)
                     }
-                    .buttonStyle(.glassProminent)
+                    Toggle(isOn: $settings.useTectonicWasm) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Use Tectonic WASM compiler")
+                            Text("– compile in browser, no TeX installation needed")
+                                .font(.callout)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
             }
         } header: {
