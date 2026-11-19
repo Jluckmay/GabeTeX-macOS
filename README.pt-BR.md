@@ -66,7 +66,8 @@ um editor que trate isso como o caso normal. Ele tem três objetivos:
   atômica preservando os metadados e percebe quando um arquivo muda no disco.
 
 ### Compilação
-- Detecta **MacTeX, TeX Live, BasicTeX e TinyTeX**; compila com o `latexmk` usando pdfLaTeX, XeLaTeX ou LuaLaTeX.
+- Detecta **MacTeX, TeX Live, BasicTeX e TinyTeX**; compila com o `latexmk` usando pdfLaTeX, XeLaTeX ou LuaLaTeX, além de contar com um compilador **Tectonic (WASM)** embutido opcional quando nenhuma distribuição TeX local está instalada.
+- **Integração com a API local do Zotero 7** em **Ajustes › Zotero**: navegue por coleções e itens do Zotero em execução (`127.0.0.1:23119`) e exporte citações selecionadas como BibTeX (`zotero.bib`).
 - **Compila em segundo plano enquanto você digita**, inclusive o texto que ainda não foi salvo, numa cópia privada
   (*shadow copy*) do projeto. Seus arquivos não são tocados até você salvar. Veja
   [como funciona](#como-a-compilação-ao-vivo-funciona).

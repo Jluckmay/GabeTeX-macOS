@@ -65,7 +65,8 @@ wanted an editor that treats that as the normal case. It has three goals:
   preserving file metadata, and notices when a file changes on disk.
 
 ### Compiling
-- Detects **MacTeX, TeX Live, BasicTeX and TinyTeX**; compiles with `latexmk` using pdfLaTeX, XeLaTeX or LuaLaTeX.
+- Detects **MacTeX, TeX Live, BasicTeX and TinyTeX**; compiles with `latexmk` using pdfLaTeX, XeLaTeX or LuaLaTeX, plus an optional built-in **Tectonic (WASM)** compiler fallback when no local TeX distribution is installed.
+- **Zotero 7 local API integration** in **Settings › Zotero**: browse collections and items from a running Zotero instance (`127.0.0.1:23119`) and export selected citations as BibTeX (`zotero.bib`).
 - **Compiles in the background while you type**, including text you have not saved yet, in a private shadow
   copy of the project. Your files are not touched until you save. See [how it works](#how-live-compilation-works).
 - Errors and warnings from the TeX log and from ChkTeX are underlined at the right line of the right file,

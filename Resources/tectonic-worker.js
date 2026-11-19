@@ -641,7 +641,7 @@ async function fetchBeamerFiles() {
             addFile('tex/latex/beamer/' + baseName, u8);
           }
           addFile('tex/latex/beamer/' + name, u8);
-          if (name === 'base/beamer.cls') loadedCoreClass = true;
+          if (name === 'beamer.cls' || name === 'base/beamer.cls') loadedCoreClass = true;
         } catch (error) {
         }
       }));
@@ -756,12 +756,12 @@ function prepareMathSource(files, mainFile) {
   if (!source) return source;
   source = source.replace(/\\\\([ \t]*\r?\n[ \t]*\[)/g, function (_, bracket) { return '\\\\\\relax' + bracket; });
   if (/\\HUGE\b/.test(source) && !/\\(?:re)?newcommand\*?\{\\HUGE\}/.test(source)) {
-    source = source.replace(/^((?:[^%\r\n]|\\.)*?)(\\begin\{document\})/m, '$1\\providecommand{\\HUGE}{\\Huge}\n$2');
+    source = source.replace(/^((?:[^%\r\n]|\\.)*?)(\\begin\s*\{document\})/m, '$1\\providecommand{\\HUGE}{\\Huge}$2');
   }
   var now = new Date();
   var dateInit = '\\year=' + now.getFullYear() + '\\month=' + (now.getMonth() + 1) + '\\day=' + now.getDate() + '\\relax ';
-  source = source.replace(/^((?:[^%\r\n]|\\.)*?)(\\begin\{document\})/m, function (_, prefix, m) {
-    return prefix + dateInit + '\n' + m;
+  source = source.replace(/^((?:[^%\r\n]|\\.)*?)(\\begin\s*\{document\})/m, function (_, prefix, m) {
+    return prefix + dateInit + m;
   });
   if (/\\documentclass\s*(\[[^\]]*\])?\s*\{beamer\}/.test(source)) {
     return stripBeamerPackages(source);
@@ -772,7 +772,7 @@ function prepareMathSource(files, mainFile) {
     var langs = babelMatch[1].split(/\s*,\s*/);
     langs.forEach(function (lang) {
       lang = lang.trim();
-      if (!lang || lang.indexOf('=') !== -1) return;
+      if (!lang || !/^[a-zA-Z0-9-]+$/.test(lang)) return;
       var ldfName = lang + '.ldf';
       if (!supplementalFiles[ldfName]) {
         var stub = '\\ProvidesLanguage{' + lang + '}\\input{nil.ldf}\\endinput';
@@ -840,9 +840,9 @@ async function compileDocument(message) {
       var realErrors = allErrors.filter(function (e) {
         return !/! Font .* not loadable/i.test(e) && !/! \\textfont .* is undefined/i.test(e);
       });
-      return new Set(realErrors).size;
+      return realErrors.length;
     })(),
-    warnings: new Set(compileLog.match(/^LaTeX Warning:.*$/gm) || []).size
+    warnings: (compileLog.match(/^(?:LaTeX|Package \S+|Class \S+) Warning:.*$/gm) || []).length
   };
 }
 

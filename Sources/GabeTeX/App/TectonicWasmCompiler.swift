@@ -340,6 +340,20 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
 
     // MARK: - WKNavigationDelegate & WKScriptMessageHandler
 
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, decisionHandler: @escaping (WKNavigationActionPolicy) -> Void) {
+        if navigationAction.navigationType == .other,
+           let url = navigationAction.request.url,
+           url.absoluteString == "about:blank" || url.host == "gabetex.local" {
+            decisionHandler(.allow)
+        } else {
+            decisionHandler(.cancel)
+        }
+    }
+
+    func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+        self.terminate()
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         isLoaded = true
         let cont = pendingLoad

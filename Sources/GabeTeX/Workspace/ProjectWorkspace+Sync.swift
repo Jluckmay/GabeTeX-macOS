@@ -91,6 +91,10 @@ extension ProjectWorkspace {
     /// A double-click or ⌘-click in the PDF (see Settings ▸ General): finds the clicked word in the source,
     /// selects it with a brief highlight and focuses the editor.
     func syncFromPDF(_ click: PDFSyncClick) {
+        if settings.useTectonicWasm {
+            flash(String(localized: "SyncTeX is not available with Tectonic WASM."))
+            return
+        }
         guard let distribution, let pdfURL, let mapper = pathMapper else { return }
         Task { [self] in
             let location = await SyncTeX(distribution: distribution).inverse(

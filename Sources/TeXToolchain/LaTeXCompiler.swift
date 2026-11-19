@@ -353,7 +353,8 @@ public actor LaTeXCompiler {
             arguments.append("-no-shell-escape")
         }
         arguments += extra
-        arguments.append(rootFileName)
+        let safeRootFileName = rootFileName.hasPrefix("-") ? "./" + rootFileName : rootFileName
+        arguments.append(safeRootFileName)
         return arguments
     }
 

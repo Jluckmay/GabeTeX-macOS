@@ -10,13 +10,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [1.1.1] — 2026-11-19
 
 ### Added
-- Optional **Tectonic WASM** fallback compiler (`tectonic-worker.js`) with serialized in-app builds, binary asset support, accurate local `\today` resolution, and PDF export on build.
-- **Zotero 7** local API integration in Settings (`/api/users/0` endpoints, ATS local networking enabled, All Items & collections browser, and BibTeX exporter).
+- Optional **Tectonic WASM** fallback compiler (`tectonic-worker.js`) with serialized in-app builds, SHA-256 integrity checks, isolated `WKWebView` navigation policy, crash recovery, binary asset support, line-number-preserving local `\today` resolution, and PDF export on build.
+- **Zotero 7** local API integration in Settings (`127.0.0.1:23119/api/users/0` endpoints, proxy bypass, ATS local networking enabled, All Items & collections browser, and BibTeX exporter).
 - **Appearance, language & editor settings**: Light/Dark/System themes, custom accent color with 2x Retina dynamic app icon, Brazilian Portuguese (`pt-BR`) localization, configurable auto-save, multi-language spell checking (`en` / `pt-BR`), and toolbar Settings button.
 
 ### Fixed
 - **VoiceOver accessibility**: live `NSAccessibility` announcements for builds, errors, status messages, and banners; fixed cursor position & Vim mode value exposure; accessible traits/actions on completion and Quick Open rows; and slide text exposure in Presentation mode.
-- **Reliability & security**: prevented auto-save alert loops, aligned native `latexmk` timeouts (`120s` live / `300s` build) and `$max_repeat = 5`, added `-no-shell-escape` by default, and blocked launching untrusted executable/script files.
+- **Reliability & security**: prevented auto-save alert loops, aligned native `latexmk` timeouts (`120s` live / `300s` build) and `$max_repeat = 5`, added `-no-shell-escape` by default, guarded leading-`-` filenames against CLI flag injection, guarded reverse SyncTeX when Tectonic WASM is active, and blocked launching untrusted executable/script files.
 
 ## [1.0.0] — 2026-10-29
 

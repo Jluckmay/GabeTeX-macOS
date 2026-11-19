@@ -110,11 +110,13 @@ nonisolated struct ZoteroExportResult: Sendable {
 }
 
 nonisolated enum ZoteroClient {
-    private static let baseURL = "http://localhost:23119/api/users/0"
+    private static let baseURL = "http://127.0.0.1:23119/api/users/0"
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 5
         config.timeoutIntervalForResource = 5
+        config.connectionProxyDictionary = [:]
+        config.httpAdditionalHeaders = ["Zotero-API-Version": "3"]
         return URLSession(configuration: config)
     }()
 
