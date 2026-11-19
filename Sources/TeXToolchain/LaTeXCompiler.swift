@@ -122,7 +122,7 @@ public actor LaTeXCompiler {
         let arguments = Self.latexmkArguments(engine: request.engine, outputDirectory: outDirectory,
                                               shellEscape: request.shellEscape, extra: request.extraArguments,
                                               rootFileName: rootName)
-        let timeout = request.timeout ?? (request.purpose == .live ? .seconds(15) : .seconds(45))
+        let timeout = request.timeout ?? (request.purpose == .live ? .seconds(120) : .seconds(300))
         var environment = distribution.processEnvironment
         // bibtex runs from the compile folder (see latexmkArguments) and writes .bbl/.blg to the absolute
         // out/ path; older bibtex versions only allow that below TEXMFOUTPUT (openout_any = p).
@@ -346,7 +346,7 @@ public actor LaTeXCompiler {
     static func latexmkArguments(engine: TeXEngine, outputDirectory: URL, shellEscape: Bool, extra: [String],
                                  rootFileName: String) -> [String] {
         var arguments = [engine.latexmkFlag, "-interaction=nonstopmode", "-file-line-error", "-synctex=1",
-                         "-e", "$bibtex_fudge = 0; $max_repeat = 3;", "-outdir=\(outputDirectory.path)"]
+                         "-e", "$bibtex_fudge = 0; $max_repeat = 5;", "-outdir=\(outputDirectory.path)"]
         if shellEscape {
             arguments.append("-shell-escape")
         } else {

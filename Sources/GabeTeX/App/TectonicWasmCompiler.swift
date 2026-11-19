@@ -4,13 +4,16 @@ import TeXCore
 import TeXToolchain
 
 /// Fallback LaTeX compiler backed by `tectonic-worker.js` inside a hidden `WKWebView`.
-/// Used only when no native TeX distribution is installed and `AppSettings.shared.useTectonicWasm` is enabled.
+/// Used when `AppSettings.shared.useTectonicWasm` is enabled (or as a fallback when no native TeX distribution is installed).
 @MainActor
 final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
     static let shared = TectonicWasmCompiler()
 
     private static let allowedExtensions: Set<String> = [
         "tex", "ltx", "bib", "sty", "cls", "bst", "def", "cfg", "clo", "ldf"
+    ]
+    private static let binaryExtensions: Set<String> = [
+        "png", "jpg", "jpeg", "pdf", "eps"
     ]
     private static let maxFileBytes = 2 * 1024 * 1024
     private static let timeoutSeconds: TimeInterval = 300
@@ -28,6 +31,8 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
     private var loadTask: Task<Void, Error>?
     private var pendingLoad: CheckedContinuation<Void, Error>?
     private var pendingCompiles: [Int: CheckedContinuation<WorkerReply, Error>] = [:]
+    private var isCompilingInWorker = false
+    private var compileWaiters: [(id: Int, cont: CheckedContinuation<Bool, Never>)] = []
     private var nextID = 0
 
     private override init() {
@@ -49,6 +54,15 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
             return CompileResult(status: .cancelled, duration: elapsed(), pathMapper: mapper)
         }
 
+        guard await acquireWorkerTurn() else {
+            return CompileResult(status: .cancelled, duration: elapsed(), pathMapper: mapper)
+        }
+        defer { releaseWorkerTurn() }
+
+        if Task.isCancelled {
+            return CompileResult(status: .cancelled, duration: elapsed(), pathMapper: mapper)
+        }
+
         do {
             try await ensureReady()
         } catch {
@@ -58,7 +72,7 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
             return CompileResult(status: .cancelled, duration: elapsed(), pathMapper: mapper)
         }
 
-        let (files, mainKey) = collectFiles(for: request, projectFiles: projectFiles)
+        let (files, binaryFiles, mainKey) = collectFiles(for: request, projectFiles: projectFiles)
         guard files[mainKey] != nil else {
             return toolError(String(localized: "The active TeX source file is missing."))
         }
@@ -68,7 +82,7 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
 
         let reply: WorkerReply
         do {
-            reply = try await runWorkerCompile(id: id, files: files, mainFile: mainKey)
+            reply = try await runWorkerCompile(id: id, files: files, mainFile: mainKey, binaryFiles: binaryFiles)
         } catch is CancellationError {
             return CompileResult(status: .cancelled, duration: elapsed(), pathMapper: mapper)
         } catch {
@@ -80,12 +94,12 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
         }
 
         var diagnostics = Self.parseDiagnostics(from: reply.log, rootFile: request.rootFile)
-        guard reply.ok, let b64 = reply.pdfBase64, let pdfData = Data(base64Encoded: b64) else {
-            let msg = reply.errorMessage ?? (reply.log.isEmpty ? "Tectonic compilation failed." : reply.log)
+        guard reply.ok, let b64 = reply.pdfBase64, !b64.isEmpty, let pdfData = Data(base64Encoded: b64) else {
+            let msg = reply.errorMessage ?? (reply.log.isEmpty ? String(localized: "Tectonic compilation failed.") : reply.log)
             if diagnostics.isEmpty {
                 diagnostics.append(Diagnostic(
                     severity: .error,
-                    source: .latex,
+                    source: .tex,
                     message: msg,
                     detail: reply.log.isEmpty ? nil : reply.log,
                     fileURL: request.rootFile,
@@ -102,17 +116,31 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
             )
         }
 
-        let pdfURL = FileManager.default.temporaryDirectory.appendingPathComponent(".gabetex-tectonic.pdf")
+        let projectHash = Self.stablePathHash(request.projectDirectory.standardizedFileURL.path)
+        let tempDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("gabetex-tectonic-\(projectHash)", isDirectory: true)
+        let pdfName = request.rootFile.deletingPathExtension().lastPathComponent + ".pdf"
+        let pdfURL = tempDir.appendingPathComponent(pdfName)
         do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
             try pdfData.write(to: pdfURL, options: .atomic)
         } catch {
             return toolError(error.localizedDescription, log: reply.log)
+        }
+
+        var exportedPDFURL: URL?
+        if request.purpose == .build {
+            let destination = request.rootFile.deletingPathExtension().appendingPathExtension("pdf")
+            if (try? pdfData.write(to: destination, options: .atomic)) != nil {
+                exportedPDFURL = destination
+            }
         }
 
         let hasErrors = reply.errors > 0 || diagnostics.contains { $0.severity == .error }
         return CompileResult(
             status: hasErrors ? .failed : .succeeded,
             pdfURL: pdfURL,
+            exportedPDFURL: exportedPDFURL,
             diagnostics: diagnostics,
             log: reply.log,
             toolOutput: hasErrors ? (diagnostics.first?.message ?? "") : "",
@@ -138,6 +166,45 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
         }
     }
 
+    private func acquireWorkerTurn() async -> Bool {
+        if Task.isCancelled { return false }
+        if !isCompilingInWorker {
+            isCompilingInWorker = true
+            return true
+        }
+        let token = nextID + 1
+        nextID = token
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+                if Task.isCancelled {
+                    continuation.resume(returning: false)
+                } else if !isCompilingInWorker {
+                    isCompilingInWorker = true
+                    continuation.resume(returning: true)
+                } else {
+                    compileWaiters.append((token, continuation))
+                }
+            }
+        } onCancel: {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                if let idx = self.compileWaiters.firstIndex(where: { $0.id == token }) {
+                    let waiter = self.compileWaiters.remove(at: idx)
+                    waiter.cont.resume(returning: false)
+                }
+            }
+        }
+    }
+
+    private func releaseWorkerTurn() {
+        if !compileWaiters.isEmpty {
+            let waiter = compileWaiters.removeFirst()
+            waiter.cont.resume(returning: true)
+            return
+        }
+        isCompilingInWorker = false
+    }
+
     // MARK: - WebView & Worker Bridge
 
     private func ensureReady() async throws {
@@ -151,7 +218,7 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
             guard let workerURL = Self.workerScriptURL(),
                   let workerScript = try? String(contentsOf: workerURL, encoding: .utf8) else {
                 throw NSError(domain: "TectonicWasm", code: 1, userInfo: [
-                    NSLocalizedDescriptionKey: "Missing tectonic-worker.js resource."
+                    NSLocalizedDescriptionKey: String(localized: "Missing tectonic-worker.js resource.")
                 ])
             }
             let scriptJSON = try String(data: JSONEncoder().encode(workerScript), encoding: .utf8) ?? "\"\""
@@ -161,12 +228,17 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
             (function() {
               const workerSource = \(scriptJSON);
               let worker = null;
+              let workerBlobUrl = null;
               function ensureWorker() {
                 if (worker) return worker;
                 const blob = new Blob([workerSource], { type: 'application/javascript' });
-                const url = URL.createObjectURL(blob);
-                worker = new Worker(url);
+                workerBlobUrl = URL.createObjectURL(blob);
+                worker = new Worker(workerBlobUrl);
                 worker.onmessage = function(e) {
+                  if (workerBlobUrl) {
+                    URL.revokeObjectURL(workerBlobUrl);
+                    workerBlobUrl = null;
+                  }
                   const msg = e.data || {};
                   if (msg.type === 'progress') return;
                   let pdfBase64 = null;
@@ -189,6 +261,10 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
                   });
                 };
                 worker.onerror = function(e) {
+                  if (workerBlobUrl) {
+                    URL.revokeObjectURL(workerBlobUrl);
+                    workerBlobUrl = null;
+                  }
                   window.webkit.messageHandlers.tectonic.postMessage({
                     type: 'workerError',
                     id: 0,
@@ -199,9 +275,9 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
                 };
                 return worker;
               }
-              window.__gabetexTectonicCompile = function(id, files, mainFile) {
+              window.__gabetexTectonicCompile = function(id, files, mainFile, binaryFiles) {
                 const w = ensureWorker();
-                w.postMessage({ type: 'compile', id: id, files: files, mainFile: mainFile });
+                w.postMessage({ type: 'compile', id: id, files: files, mainFile: mainFile, binaryFiles: binaryFiles || {} });
               };
             })();
             </script></body></html>
@@ -223,11 +299,12 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
         try await task.value
     }
 
-    private func runWorkerCompile(id: Int, files: [String: String], mainFile: String) async throws -> WorkerReply {
+    private func runWorkerCompile(id: Int, files: [String: String], mainFile: String, binaryFiles: [String: String]) async throws -> WorkerReply {
         guard let webView else { throw CancellationError() }
         let filesJSON = String(data: try JSONEncoder().encode(files), encoding: .utf8) ?? "{}"
         let mainJSON = String(data: try JSONEncoder().encode(mainFile), encoding: .utf8) ?? "\"main.tex\""
-        let callJS = "window.__gabetexTectonicCompile(\(id), \(filesJSON), \(mainJSON));"
+        let binaryJSON = String(data: try JSONEncoder().encode(binaryFiles), encoding: .utf8) ?? "{}"
+        let callJS = "window.__gabetexTectonicCompile(\(id), \(filesJSON), \(mainJSON), \(binaryJSON));"
 
         let timeoutTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(Self.timeoutSeconds))
@@ -235,7 +312,7 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
             if let cont = self.pendingCompiles.removeValue(forKey: id) {
                 self.terminate()
                 cont.resume(throwing: NSError(domain: "TectonicWasm", code: 2, userInfo: [
-                    NSLocalizedDescriptionKey: "Tectonic compilation timed out."
+                    NSLocalizedDescriptionKey: String(localized: "Tectonic compilation timed out.")
                 ]))
             }
         }
@@ -290,7 +367,8 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
         guard let body = message.body as? [String: Any],
               let type = body["type"] as? String else { return }
         if type == "workerError" {
-            let msg = body["message"] as? String ?? "Tectonic worker error"
+            let rawMsg = body["message"] as? String ?? ""
+            let msg = rawMsg.isEmpty ? String(localized: "Tectonic worker error") : rawMsg
             let active = pendingCompiles
             pendingCompiles.removeAll()
             for (_, cont) in active {
@@ -304,7 +382,7 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
         let errors = body["errors"] as? Int ?? 0
         if type == "result" {
             cont.resume(returning: WorkerReply(
-                ok: errors == 0,
+                ok: true,
                 pdfBase64: body["pdfBase64"] as? String,
                 log: log,
                 errors: errors,
@@ -323,7 +401,7 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
 
     // MARK: - Helpers
 
-    private func collectFiles(for request: CompileRequest, projectFiles: [URL]) -> ([String: String], String) {
+    private func collectFiles(for request: CompileRequest, projectFiles: [URL]) -> ([String: String], [String: String], String) {
         let baseDir = request.rootFile.deletingLastPathComponent().standardizedFileURL
         let basePrefix = baseDir.path.hasSuffix("/") ? baseDir.path : baseDir.path + "/"
         func relativeKey(for url: URL) -> String {
@@ -335,16 +413,24 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
         }
 
         var files: [String: String] = [:]
+        var binaryFiles: [String: String] = [:]
         for url in projectFiles {
             let ext = url.pathExtension.lowercased()
-            guard Self.allowedExtensions.contains(ext) else { continue }
+            let isText = Self.allowedExtensions.contains(ext)
+            let isBinary = Self.binaryExtensions.contains(ext)
+            guard isText || isBinary else { continue }
             if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
                let size = attrs[.size] as? NSNumber, size.intValue > Self.maxFileBytes {
                 continue
             }
-            if let data = FileManager.default.contents(atPath: url.path),
-               let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) {
-                files[relativeKey(for: url)] = text
+            guard let data = FileManager.default.contents(atPath: url.path) else { continue }
+            let key = relativeKey(for: url)
+            if isText {
+                if let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) {
+                    files[key] = text
+                }
+            } else {
+                binaryFiles[key] = data.base64EncodedString()
             }
         }
         for (url, text) in request.overlays {
@@ -356,27 +442,69 @@ final class TectonicWasmCompiler: NSObject, WKScriptMessageHandler, WKNavigation
            let text = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .isoLatin1) {
             files[mainKey] = text
         }
-        return (files, mainKey)
+        return (files, binaryFiles, mainKey)
     }
 
     private static func parseDiagnostics(from log: String, rootFile: URL) -> [Diagnostic] {
         var result: [Diagnostic] = []
-        for rawLine in log.split(separator: "\n", omittingEmptySubsequences: true) {
-            let line = String(rawLine)
-            guard line.hasPrefix("! ") else { continue }
+        let lines = log.components(separatedBy: "\n")
+        var index = 0
+        while index < lines.count {
+            let line = lines[index]
+            guard line.hasPrefix("! ") else {
+                index += 1
+                continue
+            }
             let message = String(line.dropFirst(2))
             if message.range(of: #"Font .* not loadable"#, options: [.regularExpression, .caseInsensitive]) != nil
                 || message.range(of: #"\\textfont .* is undefined"#, options: [.regularExpression, .caseInsensitive]) != nil {
+                index += 1
                 continue
             }
-            result.append(Diagnostic(severity: .error, source: .latex, message: message, detail: line, fileURL: rootFile, line: 1))
+            var detailLines = [line]
+            var lineNumber = 1
+            var lookahead = index + 1
+            while lookahead < lines.count {
+                let nextLine = lines[lookahead]
+                if nextLine.isEmpty || nextLine.hasPrefix("! ") { break }
+                detailLines.append(nextLine)
+                if lineNumber == 1, nextLine.hasPrefix("l.") {
+                    let digits = nextLine.dropFirst(2).prefix(while: { $0.isWholeNumber })
+                    if let parsed = Int(digits), parsed > 0 { lineNumber = parsed }
+                }
+                lookahead += 1
+            }
+            result.append(Diagnostic(
+                severity: .error,
+                source: .tex,
+                message: message,
+                detail: detailLines.joined(separator: "\n"),
+                fileURL: rootFile,
+                line: lineNumber
+            ))
+            index = lookahead
         }
         return result
+    }
+
+    private static func stablePathHash(_ path: String) -> String {
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in path.utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return String(hash, radix: 16, uppercase: false)
     }
 
     private static func workerScriptURL() -> URL? {
         if let bundled = Bundle.main.url(forResource: "tectonic-worker", withExtension: "js") {
             return bundled
+        }
+        if let executableDir = Bundle.main.executableURL?.deletingLastPathComponent() {
+            let adjacent = executableDir.appendingPathComponent("tectonic-worker.js")
+            if FileManager.default.fileExists(atPath: adjacent.path) { return adjacent }
+            let resources = executableDir.deletingLastPathComponent().appendingPathComponent("Resources/tectonic-worker.js")
+            if FileManager.default.fileExists(atPath: resources.path) { return resources }
         }
         let repoRelative = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

@@ -130,7 +130,7 @@ func unitChecks() async {
         let args = LaTeXCompiler.latexmkArguments(engine: .xelatex, outputDirectory: URL(fileURLWithPath: "/s/out/thesis"),
                                                   shellEscape: true, extra: ["-silent"], rootFileName: "main file.tex")
         Check.equal(args, ["-xelatex", "-interaction=nonstopmode", "-file-line-error", "-synctex=1",
-                           "-e", "$bibtex_fudge = 0; $max_repeat = 3;", "-outdir=/s/out/thesis", "-shell-escape", "-silent", "main file.tex"])
+                           "-e", "$bibtex_fudge = 0; $max_repeat = 5;", "-outdir=/s/out/thesis", "-shell-escape", "-silent", "main file.tex"])
         let safeArgs = LaTeXCompiler.latexmkArguments(engine: .pdflatex, outputDirectory: URL(fileURLWithPath: "/s/out"),
                                                       shellEscape: false, extra: [], rootFileName: "main.tex")
         Check.expect(safeArgs.contains("-no-shell-escape"), "-no-shell-escape added when shellEscape is false")

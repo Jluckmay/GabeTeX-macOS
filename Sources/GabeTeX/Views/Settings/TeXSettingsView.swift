@@ -91,13 +91,15 @@ struct TeXSettingsView: View {
                         }
                         .buttonStyle(.glass)
                     }
-                    Toggle(isOn: $settings.useTectonicWasm) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Use Tectonic WASM compiler")
-                            Text("– compile in browser, no TeX installation needed")
-                                .font(.callout)
-                                .foregroundStyle(.secondary)
-                        }
+                }
+            }
+            if toolchain.hasLocated {
+                Toggle(isOn: $settings.useTectonicWasm) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Use Tectonic WASM compiler")
+                        Text("– compile in browser, no TeX installation needed")
+                            .font(.callout)
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

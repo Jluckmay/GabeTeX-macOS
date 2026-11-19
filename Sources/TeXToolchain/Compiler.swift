@@ -55,7 +55,7 @@ public struct CompileRequest: Sendable {
     public var shellEscape: Bool
     public var extraArguments: [String]
     /// Wall-clock limit for the whole latexmk run (an endless TeX loop never ends on its own).
-    /// nil = 5 minutes for `.live`, 30 minutes for `.build`.
+    /// nil = 2 minutes for `.live`, 5 minutes for `.build`.
     public var timeout: Duration?
 
     public init(projectDirectory: URL, rootFile: URL, engine: TeXEngine, overlays: [URL: String] = [:], purpose: CompilePurpose, shellEscape: Bool = false, extraArguments: [String] = [], timeout: Duration? = nil) {

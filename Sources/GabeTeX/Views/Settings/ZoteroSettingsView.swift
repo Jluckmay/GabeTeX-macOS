@@ -4,13 +4,14 @@ import UniformTypeIdentifiers
 
 // MARK: - Zotero local API models & client
 
-nonisolated struct ZoteroCreator: Codable, Sendable, Hashable {
-    var creatorType: String
+nonisolated struct ZoteroCreator: Decodable, Sendable, Hashable {
+    var creatorType: String?
     var firstName: String?
     var lastName: String?
+    var name: String?
 }
 
-nonisolated struct ZoteroItem: Codable, Sendable, Identifiable, Hashable {
+nonisolated struct ZoteroItem: Decodable, Sendable, Identifiable, Hashable {
     var key: String
     var itemType: String
     var title: String?
@@ -19,14 +20,87 @@ nonisolated struct ZoteroItem: Codable, Sendable, Identifiable, Hashable {
     var collections: [String]?
 
     var id: String { key }
+
+    private nonisolated enum CodingKeys: String, CodingKey {
+        case key, data, itemType, title, creators, date, collections
+    }
+
+    private nonisolated struct Payload: Decodable, Sendable {
+        var key: String?
+        var itemType: String?
+        var title: String?
+        var creators: [ZoteroCreator]?
+        var date: String?
+        var collections: [String]?
+    }
+
+    nonisolated init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let payload = try container.decodeIfPresent(Payload.self, forKey: .data)
+        let topKey = try container.decodeIfPresent(String.self, forKey: .key)
+        self.key = payload?.key ?? topKey ?? ""
+        self.itemType = payload?.itemType ?? (try container.decodeIfPresent(String.self, forKey: .itemType)) ?? ""
+        self.title = payload?.title ?? (try container.decodeIfPresent(String.self, forKey: .title))
+        self.creators = payload?.creators ?? (try container.decodeIfPresent([ZoteroCreator].self, forKey: .creators))
+        self.date = payload?.date ?? (try container.decodeIfPresent(String.self, forKey: .date))
+        self.collections = payload?.collections ?? (try container.decodeIfPresent([String].self, forKey: .collections))
+    }
 }
 
-nonisolated struct ZoteroCollection: Codable, Sendable, Identifiable, Hashable {
+nonisolated struct ZoteroCollection: Decodable, Sendable, Identifiable, Hashable {
     var key: String
     var name: String
     var parentCollection: String?
 
     var id: String { key }
+
+    private nonisolated enum CodingKeys: String, CodingKey {
+        case key, data, name, parentCollection
+    }
+
+    private nonisolated enum ParentValue: Decodable, Sendable {
+        case key(String)
+        case none
+
+        nonisolated init(from decoder: any Decoder) throws {
+            let single = try decoder.singleValueContainer()
+            if single.decodeNil() {
+                self = .none
+            } else if let str = try? single.decode(String.self) {
+                self = str.isEmpty ? .none : .key(str)
+            } else if (try? single.decode(Bool.self)) != nil {
+                self = .none
+            } else {
+                self = .none
+            }
+        }
+
+        var value: String? {
+            switch self {
+            case .key(let k): k
+            case .none: nil
+            }
+        }
+    }
+
+    private nonisolated struct Payload: Decodable, Sendable {
+        var key: String?
+        var name: String?
+        var parentCollection: ParentValue?
+    }
+
+    nonisolated init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let payload = try container.decodeIfPresent(Payload.self, forKey: .data)
+        let topKey = try container.decodeIfPresent(String.self, forKey: .key)
+        self.key = payload?.key ?? topKey ?? ""
+        self.name = payload?.name ?? (try container.decodeIfPresent(String.self, forKey: .name)) ?? ""
+        if let parent = payload?.parentCollection {
+            self.parentCollection = parent.value
+        } else {
+            self.parentCollection = (try container.decodeIfPresent(ParentValue.self, forKey: .parentCollection))?.value
+        }
+    }
 }
 
 nonisolated struct ZoteroExportResult: Sendable {
@@ -36,7 +110,7 @@ nonisolated struct ZoteroExportResult: Sendable {
 }
 
 nonisolated enum ZoteroClient {
-    private static let baseURL = "http://localhost:23119"
+    private static let baseURL = "http://localhost:23119/api/users/0"
     private static let session: URLSession = {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = 5
@@ -49,7 +123,7 @@ nonisolated enum ZoteroClient {
     }
 
     static func status() async -> Bool {
-        guard let url = URL(string: "\(baseURL)/") else { return false }
+        guard let url = URL(string: "\(baseURL)/collections?limit=1") else { return false }
         do {
             let (_, response) = try await session.data(from: url)
             guard let http = response as? HTTPURLResponse else { return false }
@@ -66,22 +140,22 @@ nonisolated enum ZoteroClient {
     static func items(collectionKey: String?) async throws -> [ZoteroItem] {
         if let collectionKey {
             guard isValidKey(collectionKey) else {
-                throw ZoteroError.message("Invalid Zotero collection key: \(collectionKey)")
+                throw ZoteroError.message(String(localized: "Invalid Zotero collection key: \(collectionKey)"))
             }
-            return try await fetchJSON(path: "/collections/\(collectionKey)/items")
+            return try await fetchJSON(path: "/collections/\(collectionKey)/items/top")
         }
-        return try await fetchJSON(path: "/items")
+        return try await fetchJSON(path: "/items/top")
     }
 
     static func exportBib(keys: [String]) async throws -> ZoteroExportResult {
         for key in keys where !isValidKey(key) {
-            throw ZoteroError.message("Invalid Zotero item key: \(key)")
+            throw ZoteroError.message(String(localized: "Invalid Zotero item key: \(key)"))
         }
         var bibtex = ""
         var errors: [String] = []
 
         for key in keys {
-            guard let url = URL(string: "\(baseURL)/items/\(key)/export?format=bibtex") else {
+            guard let url = URL(string: "\(baseURL)/items/\(key)?format=bibtex") else {
                 errors.append("\(key): invalid URL")
                 continue
             }
@@ -117,17 +191,17 @@ nonisolated enum ZoteroClient {
 
     private static func fetchJSON<T: Decodable>(path: String) async throws -> T {
         guard let url = URL(string: "\(baseURL)\(path)") else {
-            throw ZoteroError.message("Invalid Zotero URL")
+            throw ZoteroError.message(String(localized: "Invalid Zotero URL"))
         }
         let (data, response) = try await session.data(from: url)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             let status = (response as? HTTPURLResponse)?.statusCode ?? -1
-            throw ZoteroError.message("Could not reach Zotero at \(url.absoluteString) (HTTP \(status))")
+            throw ZoteroError.message(String(localized: "Could not reach Zotero at \(url.absoluteString) (HTTP \(status))"))
         }
         return try JSONDecoder().decode(T.self, from: data)
     }
 
-    private enum ZoteroError: LocalizedError {
+    private nonisolated enum ZoteroError: LocalizedError {
         case message(String)
         var errorDescription: String? {
             switch self { case .message(let m): m }
@@ -148,6 +222,7 @@ struct ZoteroSettingsView: View {
     @LocalState private var bibtexText = ""
     @LocalState private var errorTitle: String?
     @LocalState private var errorMessage: String?
+    @LocalState private var loadGeneration = 0
 
     var body: some View {
         Form {
@@ -213,25 +288,46 @@ struct ZoteroSettingsView: View {
 
     private var collectionsSection: some View {
         Section("Collections") {
+            Button {
+                Task { await loadItems(collectionKey: nil) }
+            } label: {
+                HStack {
+                    Text("All Items")
+                    Spacer()
+                    if selectedCollectionKey == nil {
+                        Image(systemName: "checkmark")
+                            .foregroundStyle(.secondary)
+                            .accessibilityHidden(true)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isLoading)
+            .accessibilityAddTraits(selectedCollectionKey == nil ? .isSelected : [])
             if collections.isEmpty {
                 Text("No collections found.")
                     .foregroundStyle(.secondary)
             } else {
                 ForEach(collections) { collection in
+                    let isSelected = selectedCollectionKey == collection.key
                     Button {
                         Task { await loadItems(collectionKey: collection.key) }
                     } label: {
                         HStack {
                             Text(collection.name)
                             Spacer()
-                            if selectedCollectionKey == collection.key {
+                            if isSelected {
                                 Image(systemName: "checkmark")
                                     .foregroundStyle(.secondary)
+                                    .accessibilityHidden(true)
                             }
                         }
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
+                    .disabled(isLoading)
+                    .accessibilityAddTraits(isSelected ? .isSelected : [])
                 }
             }
         }
@@ -299,7 +395,13 @@ struct ZoteroSettingsView: View {
     private func itemSummary(_ item: ZoteroItem) -> String {
         let authors = (item.creators ?? [])
             .filter { $0.creatorType == "author" }
-            .map { [$0.firstName, $0.lastName].compactMap { $0 }.filter { !$0.isEmpty }.joined(separator: " ") }
+            .map { creator in
+                if let name = creator.name, !name.isEmpty { return name }
+                return [creator.firstName, creator.lastName]
+                    .compactMap { $0 }
+                    .filter { !$0.isEmpty }
+                    .joined(separator: " ")
+            }
             .filter { !$0.isEmpty }
             .joined(separator: ", ")
         let parts = [authors, item.date, item.title].compactMap { $0 }.filter { !$0.isEmpty }
@@ -307,36 +409,51 @@ struct ZoteroSettingsView: View {
     }
 
     private func refresh() async {
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
-        defer { isLoading = false }
+        items = []
+        selectedCollectionKey = nil
+        selectedKeys.removeAll()
         let ok = await ZoteroClient.status()
+        guard generation == loadGeneration else { return }
         isConnected = ok
         guard ok else {
             collections = []
-            items = []
-            selectedCollectionKey = nil
-            selectedKeys.removeAll()
+            isLoading = false
             return
         }
         do {
-            collections = try await ZoteroClient.collections()
+            async let fetchedCollections = ZoteroClient.collections()
+            async let fetchedItems = ZoteroClient.items(collectionKey: nil)
+            let (cols, allItems) = try await (fetchedCollections, fetchedItems)
+            guard generation == loadGeneration else { return }
+            collections = cols
+            items = allItems
         } catch {
+            guard generation == loadGeneration else { return }
             errorTitle = String(localized: "Error")
             errorMessage = error.localizedDescription
         }
+        isLoading = false
     }
 
-    private func loadItems(collectionKey: String) async {
+    private func loadItems(collectionKey: String?) async {
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
-        defer { isLoading = false }
         do {
-            items = try await ZoteroClient.items(collectionKey: collectionKey)
+            let loaded = try await ZoteroClient.items(collectionKey: collectionKey)
+            guard generation == loadGeneration else { return }
+            items = loaded
             selectedCollectionKey = collectionKey
             selectedKeys.removeAll()
         } catch {
+            guard generation == loadGeneration else { return }
             errorTitle = String(localized: "Error")
             errorMessage = error.localizedDescription
         }
+        isLoading = false
     }
 
     private func exportSelected() async {
@@ -346,6 +463,10 @@ struct ZoteroSettingsView: View {
             let result = try await ZoteroClient.exportBib(keys: Array(selectedKeys).sorted())
             if result.ok {
                 bibtexText = result.bibtex
+                if let partialError = result.error, !partialError.isEmpty {
+                    errorTitle = String(localized: "Export failed")
+                    errorMessage = partialError
+                }
             } else {
                 errorTitle = String(localized: "Export failed")
                 errorMessage = result.error ?? String(localized: "Unknown error")

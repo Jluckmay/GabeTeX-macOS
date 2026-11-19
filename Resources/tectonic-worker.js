@@ -137,6 +137,8 @@ var TECTONIC_FALLBACK_ROOT = 'https://raw.githubusercontent.com/nl5887/tectonic-
 var TECTONIC_WASM_SHA256 = '3a6e2a5e3b48f9719a16a07755095d00211d784c12a812490e307bb65534dd6f';
 var TECTONIC_BUNDLE_SHA256 = '57b22a478ca75c5389dad6d012e86cf06ef17814b79e5bfef89bf68d186ef23c';
 var wasmExports;
+var initialized = false;
+var initPromise = null;
 var hasBundledLatexFormat = false;
 var outputLog = '';
 var textDecoder = new TextDecoder();
@@ -331,63 +333,75 @@ async function unpackSupplementalFiles() {
 }
 
 async function initialize() {
-  if (wasmExports) return;
-  if (typeof DecompressionStream !== 'function') {
-    throw new Error('This browser does not support gzip decompression required by Tectonic.');
-  }
-  self.postMessage({ type: 'progress', stage: 'downloading the WASM engine and TeX bundle', key: 'editor.loadingEngine' });
-  var responses = await Promise.all([
-    fetchResource(TECTONIC_ROOT + 'tectonic_wasm.wasm', TECTONIC_WASM_SHA256),
-    fetchResource(TECTONIC_ROOT + 'tectonic-bundle.tar.gz', TECTONIC_BUNDLE_SHA256)
-  ]);
-  var module = await WebAssembly.compile(await responses[0].arrayBuffer());
-  var result = await WebAssembly.instantiate(module, {
-    env: envImports(),
-    wasi_snapshot_preview1: wasiImports()
-  });
-  wasmExports = result.exports;
-  if (wasmExports.tectonic_wasm_version() < 1) {
-    throw new Error('The downloaded Tectonic WebAssembly engine has an invalid version.');
-  }
-  self.postMessage({ type: 'progress', stage: 'loading the precompiled XeLaTeX format' });
-  await addTarFilesFromResponse(responses[1]);
-  await unpackSupplementalFiles();
+  if (initialized) return;
+  if (initPromise) return initPromise;
+  initPromise = (async function () {
+    try {
+      if (typeof DecompressionStream !== 'function') {
+        throw new Error('This browser does not support gzip decompression required by Tectonic.');
+      }
+      self.postMessage({ type: 'progress', stage: 'downloading the WASM engine and TeX bundle', key: 'editor.loadingEngine' });
+      var responses = await Promise.all([
+        fetchResource(TECTONIC_ROOT + 'tectonic_wasm.wasm', TECTONIC_WASM_SHA256),
+        fetchResource(TECTONIC_ROOT + 'tectonic-bundle.tar.gz', TECTONIC_BUNDLE_SHA256)
+      ]);
+      var module = await WebAssembly.compile(await responses[0].arrayBuffer());
+      var result = await WebAssembly.instantiate(module, {
+        env: envImports(),
+        wasi_snapshot_preview1: wasiImports()
+      });
+      wasmExports = result.exports;
+      if (wasmExports.tectonic_wasm_version() < 1) {
+        throw new Error('The downloaded Tectonic WebAssembly engine has an invalid version.');
+      }
+      self.postMessage({ type: 'progress', stage: 'loading the precompiled XeLaTeX format' });
+      await addTarFilesFromResponse(responses[1]);
+      await unpackSupplementalFiles();
 
-  var tulmssFallback = '\\ProvidesFile{tulmss.fd}[2021/07/23 v1.8a Latin Modern Sans mapped to Roman]\n' +
-    '\\DeclareFontFamily{TU}{lmss}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{m}{n}{<->sub*lmr/m/n}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{m}{it}{<->sub*lmr/m/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{m}{sl}{<->sub*lmr/m/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{bx}{n}{<->sub*lmr/bx/n}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{bx}{it}{<->sub*lmr/bx/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{bx}{sl}{<->sub*lmr/bx/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{b}{n}{<->sub*lmr/bx/n}{}\n' +
-    '\\endinput';
-  var tulmssData = textEncoder.encode(tulmssFallback);
-  addFile('tulmss.fd', tulmssData);
-  addFile('tex/latex/lm/tulmss.fd', tulmssData);
+      var tulmssFallback = '\\ProvidesFile{tulmss.fd}[2021/07/23 v1.8a Latin Modern Sans mapped to Roman]\n' +
+        '\\DeclareFontFamily{TU}{lmss}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{m}{n}{<->sub*lmr/m/n}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{m}{it}{<->sub*lmr/m/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{m}{sl}{<->sub*lmr/m/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{bx}{n}{<->sub*lmr/bx/n}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{bx}{it}{<->sub*lmr/bx/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{bx}{sl}{<->sub*lmr/bx/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{b}{n}{<->sub*lmr/bx/n}{}\n' +
+        '\\endinput';
+      var tulmssData = textEncoder.encode(tulmssFallback);
+      addFile('tulmss.fd', tulmssData);
+      addFile('tex/latex/lm/tulmss.fd', tulmssData);
 
-  var tulmttFallback = '\\ProvidesFile{tulmtt.fd}[2021/07/23 v1.8a Latin Modern Typewriter mapped to Roman]\n' +
-    '\\DeclareFontFamily{TU}{lmtt}{}\n' +
-    '\\DeclareFontShape{TU}{lmtt}{m}{n}{<->sub*lmr/m/n}{}\n' +
-    '\\DeclareFontShape{TU}{lmtt}{m}{it}{<->sub*lmr/m/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmtt}{m}{sl}{<->sub*lmr/m/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmtt}{bx}{n}{<->sub*lmr/bx/n}{}\n' +
-    '\\DeclareFontShape{TU}{lmtt}{bx}{it}{<->sub*lmr/bx/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmtt}{bx}{sl}{<->sub*lmr/bx/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmtt}{b}{n}{<->sub*lmr/bx/n}{}\n' +
-    '\\endinput';
-  var tulmttData = textEncoder.encode(tulmttFallback);
-  addFile('tulmtt.fd', tulmttData);
-  addFile('tex/latex/lm/tulmtt.fd', tulmttData);
+      var tulmttFallback = '\\ProvidesFile{tulmtt.fd}[2021/07/23 v1.8a Latin Modern Typewriter mapped to Roman]\n' +
+        '\\DeclareFontFamily{TU}{lmtt}{}\n' +
+        '\\DeclareFontShape{TU}{lmtt}{m}{n}{<->sub*lmr/m/n}{}\n' +
+        '\\DeclareFontShape{TU}{lmtt}{m}{it}{<->sub*lmr/m/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmtt}{m}{sl}{<->sub*lmr/m/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmtt}{bx}{n}{<->sub*lmr/bx/n}{}\n' +
+        '\\DeclareFontShape{TU}{lmtt}{bx}{it}{<->sub*lmr/bx/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmtt}{bx}{sl}{<->sub*lmr/bx/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmtt}{b}{n}{<->sub*lmr/bx/n}{}\n' +
+        '\\endinput';
+      var tulmttData = textEncoder.encode(tulmttFallback);
+      addFile('tulmtt.fd', tulmttData);
+      addFile('tex/latex/lm/tulmtt.fd', tulmttData);
 
-  wasmExports.tectonic_create_format();
-  var format = readOutput('xelatex.fmt');
-  if (!format.length) {
-    throw new Error('Tectonic could not prepare its XeLaTeX format.');
-  }
-  addFile('latex.fmt', format);
-  self.postMessage({ type: 'progress', stage: 'XeLaTeX format ready' });
+      wasmExports.tectonic_create_format();
+      var format = readOutput('xelatex.fmt');
+      if (!format.length) {
+        throw new Error('Tectonic could not prepare its XeLaTeX format.');
+      }
+      addFile('latex.fmt', format);
+      initialized = true;
+      self.postMessage({ type: 'progress', stage: 'XeLaTeX format ready' });
+    } catch (err) {
+      wasmExports = null;
+      initialized = false;
+      initPromise = null;
+      throw err;
+    }
+  })();
+  return initPromise;
 }
 
 function addTarFiles(bytes) {
@@ -604,70 +618,82 @@ var TRANSLATOR_FILES = [
   'dictionaries/translator-theorem-dictionary.sty'
 ];
 
+var beamerPromise = null;
+
 async function fetchBeamerFiles() {
   if (beamerFilesLoaded) return;
-  var allFiles = BEAMER_GITHUB_FILES
-    .concat(BEAMER_DEFAULT_THEME_FILES)
-    .concat(BEAMER_MADRID_THEME_FILES);
-  await Promise.all(allFiles.map(async function (name) {
+  if (beamerPromise) return beamerPromise;
+  beamerPromise = (async function () {
     try {
-      var response = await fetchResource(BEAMER_GITHUB_ROOT + name);
-      var bytes = await response.arrayBuffer();
-      var u8 = new Uint8Array(bytes);
-      addFile(name, u8);
-      var baseName = name.split('/').pop();
-      if (baseName !== name) {
-        addFile(baseName, u8);
-        addFile('tex/latex/beamer/' + baseName, u8);
+      var loadedCoreClass = false;
+      var allFiles = BEAMER_GITHUB_FILES
+        .concat(BEAMER_DEFAULT_THEME_FILES)
+        .concat(BEAMER_MADRID_THEME_FILES);
+      await Promise.all(allFiles.map(async function (name) {
+        try {
+          var response = await fetchResource(BEAMER_GITHUB_ROOT + name);
+          var bytes = await response.arrayBuffer();
+          var u8 = new Uint8Array(bytes);
+          addFile(name, u8);
+          var baseName = name.split('/').pop();
+          if (baseName !== name) {
+            addFile(baseName, u8);
+            addFile('tex/latex/beamer/' + baseName, u8);
+          }
+          addFile('tex/latex/beamer/' + name, u8);
+          if (name === 'base/beamer.cls') loadedCoreClass = true;
+        } catch (error) {
+        }
+      }));
+      await Promise.all(TRANSLATOR_FILES.map(async function (name) {
+        try {
+          var response = await fetchResource(TRANSLATOR_GITHUB_ROOT + name);
+          var bytes = await response.arrayBuffer();
+          var u8 = new Uint8Array(bytes);
+          addFile(name, u8);
+          var baseName = name.split('/').pop();
+          if (baseName !== name) {
+            addFile(baseName, u8);
+            addFile('tex/latex/translator/' + baseName, u8);
+          }
+          addFile('tex/latex/translator/' + name, u8);
+        } catch (error) {
+        }
+      }));
+      addFile('enumerate.sty', new TextEncoder().encode('\\ProvidesPackage{enumerate}[2000/08/01]\\endinput'));
+      addFile('tex/latex/enumerate/enumerate.sty', new TextEncoder().encode('\\ProvidesPackage{enumerate}[2000/08/01]\\endinput'));
+      var amsStub = new TextEncoder().encode('\\ProvidesPackage{amssymb}[2013/01/14 v3.01]\n\\providecommand{\\blacktriangleright}{\\ensuremath{\\triangleright}}\n\\providecommand{\\square}{\\framebox[1.1ex]{\\rule{0pt}{1ex}}}\n\\endinput');
+      addFile('amssymb.sty', amsStub);
+      addFile('tex/latex/amssymb/amssymb.sty', amsStub);
+      var amsFontsStub = new TextEncoder().encode('\\ProvidesPackage{amsfonts}[2013/01/14 v3.01]\\endinput');
+      addFile('amsfonts.sty', amsFontsStub);
+      addFile('tex/latex/amsfonts/amsfonts.sty', amsFontsStub);
+      var tulmssFallback = '\\ProvidesFile{tulmss.fd}[2021/07/23 v1.8a Latin Modern Sans mapped to Roman]\n' +
+        '\\DeclareFontFamily{TU}{lmss}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{m}{n}{<->sub*lmr/m/n}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{m}{it}{<->sub*lmr/m/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{m}{sl}{<->sub*lmr/m/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{bx}{n}{<->sub*lmr/bx/n}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{bx}{it}{<->sub*lmr/bx/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{bx}{sl}{<->sub*lmr/bx/it}{}\n' +
+        '\\DeclareFontShape{TU}{lmss}{b}{n}{<->sub*lmr/bx/n}{}\n' +
+        '\\endinput';
+      var tulmssData = new TextEncoder().encode(tulmssFallback);
+      addFile('tulmss.fd', tulmssData);
+      addFile('tex/latex/lm/tulmss.fd', tulmssData);
+      try {
+        var response = await fetchResource(XXCOLOR_URL);
+        var bytes = await response.arrayBuffer();
+        addFile('xxcolor.sty', new Uint8Array(bytes));
+        addFile('tex/latex/beamer/xxcolor.sty', new Uint8Array(bytes));
+      } catch (error) {
       }
-      addFile('tex/latex/beamer/' + name, u8);
-    } catch (error) {
+      beamerFilesLoaded = loadedCoreClass;
+    } finally {
+      beamerPromise = null;
     }
-  }));
-  await Promise.all(TRANSLATOR_FILES.map(async function (name) {
-    try {
-      var response = await fetchResource(TRANSLATOR_GITHUB_ROOT + name);
-      var bytes = await response.arrayBuffer();
-      var u8 = new Uint8Array(bytes);
-      addFile(name, u8);
-      var baseName = name.split('/').pop();
-      if (baseName !== name) {
-        addFile(baseName, u8);
-        addFile('tex/latex/translator/' + baseName, u8);
-      }
-      addFile('tex/latex/translator/' + name, u8);
-    } catch (error) {
-    }
-  }));
-  addFile('enumerate.sty', new TextEncoder().encode('\\ProvidesPackage{enumerate}[2000/08/01]\\endinput'));
-  addFile('tex/latex/enumerate/enumerate.sty', new TextEncoder().encode('\\ProvidesPackage{enumerate}[2000/08/01]\\endinput'));
-  var amsStub = new TextEncoder().encode('\\ProvidesPackage{amssymb}[2013/01/14 v3.01]\n\\providecommand{\\blacktriangleright}{\\ensuremath{\\triangleright}}\n\\providecommand{\\square}{\\framebox[1.1ex]{\\rule{0pt}{1ex}}}\n\\endinput');
-  addFile('amssymb.sty', amsStub);
-  addFile('tex/latex/amssymb/amssymb.sty', amsStub);
-  var amsFontsStub = new TextEncoder().encode('\\ProvidesPackage{amsfonts}[2013/01/14 v3.01]\\endinput');
-  addFile('amsfonts.sty', amsFontsStub);
-  addFile('tex/latex/amsfonts/amsfonts.sty', amsFontsStub);
-  var tulmssFallback = '\\ProvidesFile{tulmss.fd}[2021/07/23 v1.8a Latin Modern Sans mapped to Roman]\n' +
-    '\\DeclareFontFamily{TU}{lmss}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{m}{n}{<->sub*lmr/m/n}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{m}{it}{<->sub*lmr/m/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{m}{sl}{<->sub*lmr/m/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{bx}{n}{<->sub*lmr/bx/n}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{bx}{it}{<->sub*lmr/bx/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{bx}{sl}{<->sub*lmr/bx/it}{}\n' +
-    '\\DeclareFontShape{TU}{lmss}{b}{n}{<->sub*lmr/bx/n}{}\n' +
-    '\\endinput';
-  var tulmssData = new TextEncoder().encode(tulmssFallback);
-  addFile('tulmss.fd', tulmssData);
-  addFile('tex/latex/lm/tulmss.fd', tulmssData);
-  try {
-    var response = await fetchResource(XXCOLOR_URL);
-    var bytes = await response.arrayBuffer();
-    addFile('xxcolor.sty', new Uint8Array(bytes));
-    addFile('tex/latex/beamer/xxcolor.sty', new Uint8Array(bytes));
-  } catch (error) {
-  }
-  beamerFilesLoaded = true;
+  })();
+  return beamerPromise;
 }
 
 function sourceUsesBeamer(sourceText) {
@@ -728,13 +754,15 @@ function stripFontDependentPackages(source) {
 function prepareMathSource(files, mainFile) {
   var source = files[mainFile];
   if (!source) return source;
-  source = source.replace(/\\\\(\s*\[)/g, function (_, bracket) { return '\\\\\\relax' + bracket; });
+  source = source.replace(/\\\\([ \t]*\r?\n[ \t]*\[)/g, function (_, bracket) { return '\\\\\\relax' + bracket; });
   if (/\\HUGE\b/.test(source) && !/\\(?:re)?newcommand\*?\{\\HUGE\}/.test(source)) {
-    source = source.replace(/\\begin\{document\}/, '\\providecommand{\\HUGE}{\\Huge}\n\\begin{document}');
+    source = source.replace(/^((?:[^%\r\n]|\\.)*?)(\\begin\{document\})/m, '$1\\providecommand{\\HUGE}{\\Huge}\n$2');
   }
   var now = new Date();
   var dateInit = '\\year=' + now.getFullYear() + '\\month=' + (now.getMonth() + 1) + '\\day=' + now.getDate() + '\\relax ';
-  source = source.replace(/\\begin\{document\}/, function (m) { return m + dateInit; });
+  source = source.replace(/^((?:[^%\r\n]|\\.)*?)(\\begin\{document\})/m, function (_, prefix, m) {
+    return prefix + dateInit + '\n' + m;
+  });
   if (/\\documentclass\s*(\[[^\]]*\])?\s*\{beamer\}/.test(source)) {
     return stripBeamerPackages(source);
   }
@@ -765,6 +793,15 @@ async function compileDocument(message) {
   var files = message.files || {};
   Object.keys(files).forEach(function (name) {
     addFile(name, textEncoder.encode(files[name]));
+  });
+  var binaryFiles = message.binaryFiles || {};
+  Object.keys(binaryFiles).forEach(function (name) {
+    var b64 = binaryFiles[name];
+    if (typeof b64 !== 'string') return;
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    addFile(name, bytes);
   });
   var source = files[message.mainFile];
   if (typeof source !== 'string') throw new Error('The active TeX source file is missing.');

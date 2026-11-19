@@ -82,13 +82,13 @@ extension ProjectWorkspace {
         compileState = .compiling(purpose)
         compileTask = Task { [weak self] in
             guard let self else { return }
-            if let compiler = await self.currentCompiler() {
-                if Task.isCancelled { return }
-                let result = await compiler.compile(request)
-                self.finishCompile(result, purpose: purpose, generation: generation, compileEditVersion: compileEditVersion)
-            } else if self.settings.useTectonicWasm {
+            if self.settings.useTectonicWasm {
                 if Task.isCancelled { return }
                 let result = await TectonicWasmCompiler.shared.compile(request, projectFiles: self.allFiles)
+                self.finishCompile(result, purpose: purpose, generation: generation, compileEditVersion: compileEditVersion)
+            } else if let compiler = await self.currentCompiler() {
+                if Task.isCancelled { return }
+                let result = await compiler.compile(request)
                 self.finishCompile(result, purpose: purpose, generation: generation, compileEditVersion: compileEditVersion)
             } else {
                 self.finishWithoutTeX(generation: generation)
@@ -195,6 +195,17 @@ extension ProjectWorkspace {
     /// Removes the shadow workspace (auxiliary files) and rebuilds from scratch.
     func cleanAuxiliaryFiles() {
         stopCompile()
+        if settings.useTectonicWasm {
+            TectonicWasmCompiler.shared.terminate()
+            compileDiagnostics = []
+            rebuildDiagnostics()
+            log = ""
+            toolOutput = ""
+            pdfStamp = nil
+            flash(String(localized: "Auxiliary files removed"))
+            startCompile(.live, force: true)
+            return
+        }
         Task { [self] in
             guard let compiler = await currentCompiler() else { return }
             await compiler.clean(projectDirectory: folderURL)

@@ -26,6 +26,10 @@ extension ProjectWorkspace {
     ///   - silent: no messages, and a hidden preview stays hidden.
     ///   - onlyIfOffscreen: “Follow cursor”: the PDF scrolls only when the target is not already visible.
     func showInPDF(position: SourcePosition?, editorWord: String?, silent: Bool = false, onlyIfOffscreen: Bool = false) {
+        if settings.useTectonicWasm {
+            if !silent { flash(String(localized: "SyncTeX is not available with Tectonic WASM.")) }
+            return
+        }
         guard let distribution, let pdfURL, let mapper = pathMapper, let file = currentFile else {
             if !silent { flash(String(localized: "Compile the document first to show a position in the PDF.")) }
             return

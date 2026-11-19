@@ -368,16 +368,23 @@ public final class LaTeXTextView: NSTextView {
             applyWrapping()
             gutter?.metricsDidChange()
         }
-        isContinuousSpellCheckingEnabled = configuration.spellChecking
+        let effectiveSpellChecking = configuration.spellChecking && !configuration.spellCheckingLanguages.isEmpty
+        isContinuousSpellCheckingEnabled = effectiveSpellChecking
         isGrammarCheckingEnabled = false
-        if configuration.spellChecking {
+        let spellSettingsChanged = force
+            || previous?.spellChecking != configuration.spellChecking
+            || previous?.spellCheckingLanguages != configuration.spellCheckingLanguages
+        if spellSettingsChanged && effectiveSpellChecking {
             let langs = configuration.spellCheckingLanguages
             if langs.count == 1, let single = langs.first {
                 let code = single == "pt-BR" ? "pt_BR" : single
                 NSSpellChecker.shared.automaticallyIdentifiesLanguages = false
-                NSSpellChecker.shared.setLanguage(code)
+                _ = NSSpellChecker.shared.setLanguage(code)
             } else {
                 NSSpellChecker.shared.automaticallyIdentifiesLanguages = true
+            }
+            if !force {
+                checkTextInDocument(nil)
             }
         }
         if force || previous?.vimMode != configuration.vimMode {

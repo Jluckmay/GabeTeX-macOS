@@ -19,17 +19,29 @@ extension ProjectWorkspace {
         scheduleAutoSave()
     }
 
-    /// Debounced automatic save of all dirty open tabs when `settings.autoSave` is enabled.
-    func scheduleAutoSave() {
-        debounceTasks["autoSave"]?.cancel()
-        guard settings.autoSave, hasUnsavedChanges else { return }
+    /// Schedules automatic save of all dirty open tabs when `settings.autoSave` is enabled.
+    func scheduleAutoSave(reset: Bool = false) {
+        if reset {
+            debounceTasks["autoSave"]?.cancel()
+            debounceTasks["autoSave"] = nil
+        }
+        guard settings.autoSave, hasUnsavedChanges else {
+            debounceTasks["autoSave"]?.cancel()
+            debounceTasks["autoSave"] = nil
+            return
+        }
+        if debounceTasks["autoSave"] != nil { return }
         let ms = Int((min(180, max(0.2, settings.autoSaveInterval)) * 1000).rounded())
         debounce("autoSave", after: .milliseconds(ms)) { [weak self] in
-            guard let self, self.settings.autoSave, !self.stopped else { return }
+            guard let self else { return }
+            self.debounceTasks["autoSave"] = nil
+            guard self.settings.autoSave, !self.stopped else { return }
             let dirty = self.dirtyURLs
             guard !dirty.isEmpty else { return }
-            _ = self.saveBatch(dirty)
-            if self.hasUnsavedChanges { self.scheduleAutoSave() }
+            let failed = self.saveBatch(dirty)
+            if failed.isEmpty, self.hasUnsavedChanges {
+                self.scheduleAutoSave()
+            }
         }
     }
 

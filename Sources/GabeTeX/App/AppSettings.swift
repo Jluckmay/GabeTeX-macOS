@@ -62,7 +62,7 @@ final class AppSettings {
     var autoSaveInterval: Double {
         didSet {
             let clamped = min(180, max(0.2, autoSaveInterval))
-            if clamped != autoSaveInterval { autoSaveInterval = clamped; return }
+            if clamped != autoSaveInterval { autoSaveInterval = clamped }
             defaults.set(autoSaveInterval, forKey: Key.autoSaveInterval)
         }
     }
@@ -114,6 +114,7 @@ final class AppSettings {
 
     /// Dynamic app icon rendered with the active `accentColor`.
     var appIconImage: NSImage
+    @ObservationIgnored private var lastAppliedIconHex = ""
 
     init() {
         let d = UserDefaults.standard
@@ -152,14 +153,13 @@ final class AppSettings {
         indentWidth = min(8, max(1, int(Key.indentWidth, 2)))
         insertSpaces = bool(Key.insertSpaces, true)
         spellChecking = bool(Key.spellChecking, true)
-        let savedSpellLangs = d.stringArray(forKey: Key.spellCheckingLanguages) ?? []
-        if savedSpellLangs.isEmpty {
+        if let savedSpellLangs = d.object(forKey: Key.spellCheckingLanguages) as? [String] {
+            spellCheckingLanguages = savedSpellLangs
+        } else {
             let effective = storedLanguage == "system"
                 ? (Locale.preferredLanguages.first?.lowercased().hasPrefix("pt") == true ? "pt-BR" : "en")
                 : (["en", "pt-BR"].contains(storedLanguage) ? storedLanguage : "en")
             spellCheckingLanguages = [effective]
-        } else {
-            spellCheckingLanguages = savedSpellLangs
         }
         tabCompletes = bool(Key.tabCompletes, true)
         completionAcceptKeys = CompletionAcceptKeys(rawValue: d.string(forKey: Key.completionAcceptKeys) ?? "") ?? .tabAndReturn
@@ -237,13 +237,19 @@ final class AppSettings {
 
     func applyAccentColor() {
         guard let rgb = Self.parseHex(accentColor) else { return }
+        let norm = Self.normalizedHex(accentColor) ?? accentColor
         let nsColor = NSColor(srgbRed: rgb.r, green: rgb.g, blue: rgb.b, alpha: 1)
         EditorTheme.setCustomAccentColor(nsColor)
-        let icon = Self.makeAccentIcon(hex: accentColor, rgb: rgb)
-        appIconImage = icon
+        if lastAppliedIconHex != norm {
+            lastAppliedIconHex = norm
+            appIconImage = Self.makeAccentIcon(hex: norm, rgb: rgb)
+        }
         if let app = NSApp {
-            app.applicationIconImage = icon
-            for window in app.windows { window.viewsNeedDisplay = true }
+            app.applicationIconImage = appIconImage
+            for window in app.windows {
+                window.viewsNeedDisplay = true
+                window.contentView?.needsDisplay = true
+            }
         }
     }
 
@@ -283,15 +289,18 @@ final class AppSettings {
         }
 
         let size = 256
+        let scale = 2
+        let pixelSize = size * scale
         let inset: CGFloat = 25
         let side: CGFloat = 206
         guard let ctx = CGContext(
-            data: nil, width: size, height: size, bitsPerComponent: 8, bytesPerRow: 0,
+            data: nil, width: pixelSize, height: pixelSize, bitsPerComponent: 8, bytesPerRow: 0,
             space: CGColorSpaceCreateDeviceRGB(),
             bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue
         ) else {
             return NSImage()
         }
+        ctx.scaleBy(x: CGFloat(scale), y: CGFloat(scale))
         ctx.interpolationQuality = .high
         ctx.setAllowsAntialiasing(true)
         ctx.setShouldAntialias(true)
