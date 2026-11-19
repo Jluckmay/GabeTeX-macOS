@@ -215,6 +215,7 @@ struct SlideImage: NSViewRepresentable {
     var prefetch: [Int] = []
     var cornerRadius: CGFloat = 10
     var accessibilityLabel: String = ""
+    var accessibilityValue: String? = nil
     var onClick: (() -> Void)?
 
     func makeNSView(context: Context) -> SlideLayerView {
@@ -234,6 +235,7 @@ struct SlideImage: NSViewRepresentable {
         view.cornerRadius = cornerRadius
         view.onClick = onClick
         view.setAccessibilityLabel(accessibilityLabel)
+        view.setAccessibilityValue(accessibilityValue)
         view.show(deck: deck, page: page, part: part)
     }
 }

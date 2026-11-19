@@ -63,6 +63,7 @@ struct QuickOpenView: View {
                                 QuickOpenRow(item: item, isSelected: index == selection)
                                     .id(item.id)
                                     .onTapGesture { open(item) }
+                                    .accessibilityAction { open(item) }
                             }
                         }
                         .padding(6)
@@ -122,6 +123,7 @@ private struct QuickOpenRow: View {
             Image(systemName: symbol)
                 .frame(width: 20)
                 .foregroundStyle(isSelected ? Color.accentColor : .secondary)
+                .accessibilityHidden(true)
             Text(item.name)
                 .fontWeight(.medium)
                 .lineLimit(1)
@@ -146,7 +148,7 @@ private struct QuickOpenRow: View {
         .background(isSelected ? Color.accentColor.opacity(0.16) : .clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private var symbol: String {

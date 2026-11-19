@@ -1,4 +1,5 @@
 import AppKit
+import PDFKit
 import Observation
 import SwiftUI
 
@@ -94,6 +95,7 @@ public final class PresentationController {
     @ObservationIgnored public var onEnd: (() -> Void)?
 
     @ObservationIgnored private var documentData: Data?
+    @ObservationIgnored private var pdfDocument: PDFDocument?
     @ObservationIgnored private(set) var primaryWindow: PresentationWindow?
     @ObservationIgnored private(set) var presenterWindow: PresentationWindow?
     @ObservationIgnored private weak var source: PDFPreviewController?
@@ -127,6 +129,16 @@ public final class PresentationController {
         case .dual: true
         case .single(let showsPresenter): showsPresenter
         }
+    }
+
+    /// Plain text extracted from `page(at: index)` for VoiceOver.
+    public func accessibleText(forPage index: Int) -> String? {
+        guard index >= 0, let pdfDocument, index < pdfDocument.pageCount,
+              let raw = pdfDocument.page(at: index)?.string else { return nil }
+        let collapsed = raw.components(separatedBy: .whitespacesAndNewlines)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return collapsed.isEmpty ? nil : collapsed
     }
 
     // MARK: Loading
@@ -170,6 +182,7 @@ public final class PresentationController {
         let pages = SlidePDF.pageInfos(of: document)
         let generation = renderer.setDocument(data)
         documentData = data
+        pdfDocument = PDFDocument(data: data)
         loadFailure = nil
         deck = SlideDeck(generation: generation, pages: pages, notesSide: notesSide(for: pages))
         navigator.updatePageCount(pages.count)

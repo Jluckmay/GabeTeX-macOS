@@ -242,6 +242,7 @@ private struct PresenterSlides: View {
             SlideImage(deck: deck, renderer: controller.renderer, page: deck.pageCount > 0 ? index : nil,
                        part: .slide, prefetch: [1, -1], cornerRadius: 12,
                        accessibilityLabel: String(localized: "Current slide, \(index + 1) of \(deck.pageCount)"),
+                       accessibilityValue: deck.pageCount > 0 ? controller.accessibleText(forPage: index) : nil,
                        onClick: { [controller] in controller.perform(.next) })
                 .frame(width: fitted.width, height: fitted.height)
                 .overlay { BlankCover(blank: blank) }
@@ -278,6 +279,7 @@ private struct PresenterSlides: View {
                     SlideImage(deck: deck, renderer: controller.renderer, page: next, part: .slide, prefetch: [1],
                                cornerRadius: 10,
                                accessibilityLabel: String(localized: "Next slide, \(next + 1) of \(deck.pageCount)"),
+                               accessibilityValue: controller.accessibleText(forPage: next),
                                onClick: { [controller] in controller.perform(.next) })
                         .overlay {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)

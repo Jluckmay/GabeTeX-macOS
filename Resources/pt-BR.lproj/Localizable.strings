@@ -679,6 +679,8 @@
 "Português (Brasil)" = "Português (Brasil)";
 "English, Português (Brasil)" = "Inglês, Português (Brasil)";
 
+"Changing the language takes full effect after restarting GabeTeX." = "A alteração do idioma entra completamente em vigor após reiniciar o GabeTeX.";
+
 /* ===== TeX Program & Tectonic WASM ===== */
 "Program" = "Programa";
 "Program version" = "Versão do programa";
@@ -687,7 +689,18 @@
 "Get TinyTeX" = "Obter o TinyTeX";
 "Use Tectonic WASM compiler" = "Usar compilador Tectonic WASM";
 "– compile in browser, no TeX installation needed" = "– compilar no navegador, sem necessidade de instalação do TeX";
+"Tectonic WASM" = "Tectonic WASM";
 "The active TeX source file is missing." = "O arquivo fonte TeX ativo está ausente.";
+"Missing tectonic-worker.js resource." = "Recurso tectonic-worker.js ausente.";
+"Tectonic compilation failed." = "A compilação com Tectonic falhou.";
+"Tectonic compilation timed out." = "Tempo limite excedido na compilação com Tectonic.";
+"Tectonic worker error" = "Erro no worker do Tectonic";
+"SyncTeX is not available with Tectonic WASM." = "SyncTeX não está disponível com o Tectonic WASM.";
+
+/* ===== Accessibility ===== */
+"Text encoding" = "Codificação de texto";
+"Black screen" = "Tela preta";
+"White screen" = "Tela branca";
 
 /* ===== Security ===== */
 "Opening executable or script files (%@) is blocked for security." = "A abertura de arquivos executáveis ou de script (%@) é bloqueada por segurança.";
@@ -702,6 +715,7 @@
 "Make sure Zotero is running and the local API is enabled." = "Certifique-se de que o Zotero está em execução e a API local está habilitada.";
 "Zotero Web API docs" = "Documentação da API Web do Zotero";
 "Collections" = "Coleções";
+"All Items" = "Todos os Itens";
 "No collections found." = "Nenhuma coleção encontrada.";
 "Items" = "Itens";
 "No items found." = "Nenhum item encontrado.";
@@ -711,5 +725,9 @@
 "No BibTeX exported yet." = "Nenhum BibTeX exportado ainda.";
 "Export failed" = "Exportação falhou";
 "Unknown error" = "Erro desconhecido";
+"Invalid Zotero collection key: %@" = "Chave de coleção Zotero inválida: %@";
+"Invalid Zotero item key: %@" = "Chave de item Zotero inválida: %@";
+"Invalid Zotero URL" = "URL do Zotero inválida";
+"Could not reach Zotero at %@ (HTTP %lld)" = "Não foi possível conectar ao Zotero em %@ (HTTP %lld)";
 "Connect to Zotero’s local API to browse your library and export citations as BibTeX. Save the .bib file in your project and reference it with \\bibliography{zotero} or \\addbibresource{zotero.bib}." = "Conecte-se à API local do Zotero para navegar pela sua biblioteca e exportar citações como BibTeX. Salve o arquivo .bib na pasta do seu projeto e referencie-o com \\bibliography{zotero} ou \\addbibresource{zotero.bib}.";
 

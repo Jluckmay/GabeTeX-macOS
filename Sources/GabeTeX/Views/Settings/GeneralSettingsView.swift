@@ -114,15 +114,18 @@ struct GeneralSettingsView: View {
                             .buttonStyle(.plain)
                             .help(preset.title)
                             .accessibilityLabel(preset.title)
+                            .accessibilityAddTraits(selected ? .isSelected : [])
                         }
                         ColorPicker("", selection: customColorBinding, supportsOpacity: false)
                             .labelsHidden()
                             .help("Custom color")
+                            .accessibilityLabel("Custom color")
                         TextField("#0a84ff", text: $hexInput)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(size: 11, design: .monospaced))
                             .frame(width: 74)
                             .help("Hex color")
+                            .accessibilityLabel("Hex color")
                             .onSubmit { commitHexInput() }
                             .onChange(of: hexInput) { _, newValue in
                                 if let norm = AppSettings.normalizedHex(newValue),
@@ -147,6 +150,8 @@ struct GeneralSettingsView: View {
                 }
             } header: {
                 Text("Appearance")
+            } footer: {
+                Text("Changing the language takes full effect after restarting GabeTeX.")
             }
         }
         .formStyle(.grouped)
@@ -166,7 +171,7 @@ struct GeneralSettingsView: View {
                 let g = max(0, min(255, Int((srgb.greenComponent * 255).rounded())))
                 let b = max(0, min(255, Int((srgb.blueComponent * 255).rounded())))
                 let hex = String(format: "#%02x%02x%02x", r, g, b)
-                settings.accentColor = hex
+                if settings.accentColor != hex { settings.accentColor = hex }
                 hexInput = hex
             }
         )

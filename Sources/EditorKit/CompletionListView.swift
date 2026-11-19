@@ -19,6 +19,7 @@ struct CompletionListView: View {
                             .frame(height: rowHeight)
                             .contentShape(Rectangle())
                             .onTapGesture { onAccept(index) }
+                            .accessibilityAction { onAccept(index) }
                             .id(index)
                     }
                 }
@@ -83,7 +84,7 @@ private struct CompletionRow: View {
             }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     /// The label with the typed prefix in semibold.

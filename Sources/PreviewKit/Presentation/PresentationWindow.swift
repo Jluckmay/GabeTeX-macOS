@@ -224,6 +224,12 @@ public final class AudienceSlidesView: NSView, PresentationRefreshing {
         setAccessibilityLabel(deck.pageCount > 0
             ? String(localized: "Slide \(navigator.currentIndex + 1) of \(deck.pageCount)")
             : String(localized: "No slides"))
+        let slideValue: String? = switch navigator.blank {
+        case .black: String(localized: "Black screen")
+        case .white: String(localized: "White screen")
+        case .none: deck.pageCount > 0 ? controller.accessibleText(forPage: navigator.currentIndex) : nil
+        }
+        setAccessibilityValue(slideValue)
         updateDigitsBadge(controller)
     }
 

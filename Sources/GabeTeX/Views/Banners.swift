@@ -37,6 +37,51 @@ struct BannerStack: View {
         .animation(.smooth(duration: 0.25), value: externalURLs)
         .animation(.smooth(duration: 0.25), value: encodingURLs)
         .animation(.smooth(duration: 0.25), value: showNoTeX)
+        .onChange(of: showNoTeX) { _, visible in
+            if visible {
+                AccessibilityAnnouncer.post(String(localized: "No TeX distribution was found"), priority: .high)
+            }
+        }
+        .onChange(of: workspace.packages.phase) { _, phase in
+            switch phase {
+            case .offer(let files):
+                if files.count == 1, let file = files.first {
+                    AccessibilityAnnouncer.post(String(localized: "“\(file)” is not installed"), priority: .high)
+                } else if let first = files.first {
+                    AccessibilityAnnouncer.post(
+                        String(localized: "“\(first)” and \(files.count - 1) more files are not installed"),
+                        priority: .high
+                    )
+                }
+            case .choose(let file, _):
+                AccessibilityAnnouncer.post(String(localized: "Several packages provide “\(file)”"), priority: .high)
+            case .needsManagerUpdate:
+                AccessibilityAnnouncer.post(
+                    String(localized: "The TeX Live manager needs to be updated first"),
+                    priority: .high
+                )
+            case .idle, .searching, .installing, .updatingManager:
+                break
+            }
+        }
+        .onChange(of: externalURLs) { old, new in
+            for url in new where !old.contains(url) {
+                guard let change = workspace.externalChanges[url] else { continue }
+                let msg = switch change {
+                case .modified: String(localized: "“\(url.lastPathComponent)” changed on disk")
+                case .deleted: String(localized: "“\(url.lastPathComponent)” was deleted from disk")
+                }
+                AccessibilityAnnouncer.post(msg, priority: .high)
+            }
+        }
+        .onChange(of: encodingURLs) { old, new in
+            for url in new where !old.contains(url) {
+                AccessibilityAnnouncer.post(
+                    String(localized: "“\(url.lastPathComponent)” is not valid UTF-8"),
+                    priority: .high
+                )
+            }
+        }
     }
 
     private func bannerPadding(_ externalCount: Int) -> CGFloat {
