@@ -100,10 +100,13 @@ wanted an editor that treats that as the normal case. It has three goals:
   reloads keep your slide. See the [presentation keys](#during-a-presentation).
 
 ### Writing
-- **Math Symbols table** in the left sidebar (`Σ` button / `⌥⌘3`): 14 categories (436 LaTeX symbols across core
-  LaTeX, `amsmath`, `amssymb`, `mathrsfs`, and `gensymb`), live search, package preview footer, click-to-insert with
-  snippet tab stops, drag-and-drop directly onto any position in the editor, and automatic `$...$` / `\[...\]`
-  delimiter wrapping outside math mode (merging adjacent single `$` delimiters on consecutive insertions).
+- **Math Symbols table** in the left sidebar (`Σ` button / `⌥⌘3`): 15 categories (470 LaTeX symbols across core
+  LaTeX, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, `eurosym`, plus a text-mode **Linguistic Symbols**
+  section), live search, package preview footer, click-to-insert with snippet tab stops (`\log_{}` prefilled with a base
+  subscript), drag-and-drop directly onto any position in the editor, automatic `\usepackage{...}` preamble injection
+  (updating the main document when editing preamble-less included files), and automatic `$...$` / `\[...\]` delimiter
+  wrapping outside math mode (merging adjacent single `$` delimiters on consecutive insertions and skipping text-mode
+  linguistic symbols).
 - Autocomplete for commands, environments, `\ref` / `\cite` keys, file names and packages, with snippets.
   **Tab completes** by default: press Tab after a partial command or inside `\ref{…}`, `\cite{…}` or `\begin{…}`;
   ⌃Space always works too.
@@ -111,7 +114,9 @@ wanted an editor that treats that as the normal case. It has three goals:
   section (pages appear once the PDF is built); the outline sidebar shows each section's word count.
 - **Command Palette** (⇧⌘P) to find and run any command by name, and **editable keyboard shortcuts** in
   **Settings › Shortcuts**.
-- Syntax highlighting, line numbers, auto-pairing, auto-closing of `\begin`…`\end`, comment toggling.
+- Syntax highlighting, line numbers, auto-pairing (`{ }`, `( )`, `[ ]`, `$ $`, `\( \)`, `\[ \]`), automatic closing of
+  `\begin{env}` on `}`, paired `Backspace`/`Delete` deletion across balanced pairs and empty environments, and
+  comment toggling.
 - Optional **Vim mode**: normal, insert, visual and visual-line modes, operators and text objects (including
   `i$` / `a$` for math and `ie` / `ae` for environments), `:w :wa :q :make`, search and substitute. Dead keys on
   ABNT2 and US-International layouts work.

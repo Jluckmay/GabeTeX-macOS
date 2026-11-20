@@ -103,11 +103,13 @@ um editor que trate isso como o caso normal. Ele tem três objetivos:
   [teclas da apresentação](#durante-uma-apresentação).
 
 ### Escrita
-- **Tabela de Símbolos Matemáticos** na barra lateral esquerda (botão `Σ` / `⌥⌘3`): 14 categorias (436 símbolos LaTeX
-  padrão, `amsmath`, `amssymb`, `mathrsfs` e `gensymb`), busca em tempo real, rodapé de prévia com pacote requerido,
-  inserção por clique com *tab stops*, arrastar e soltar (drag-and-drop) em qualquer posição do editor e inserção
-  automática de delimitadores `$...$` / `\[...\]` fora do modo matemático (fundindo `$` simples adjacentes em cliques
-  consecutivos).
+- **Tabela de Símbolos Matemáticos** na barra lateral esquerda (botão `Σ` / `⌥⌘3`): 15 categorias (470 símbolos LaTeX
+  padrão, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, `eurosym` e uma seção de **Símbolos Linguísticos** em
+  modo texto), busca em tempo real, rodapé de prévia com pacote requerido, inserção por clique com *tab stops*
+  (`\log_{}` com subscrito de base), arrastar e soltar (drag-and-drop) em qualquer posição do editor, importação
+  automática de `\usepackage{...}` no preâmbulo (atualizando o documento principal ao editar fragmentos incluídos) e
+  delimitação automática `$...$` / `\[...\]` fora do modo matemático (fundindo `$` simples adjacentes em cliques
+  consecutivos e preservando símbolos linguísticos em modo texto).
 - Autocompletar para comandos, ambientes, chaves de `\ref` / `\cite`, nomes de arquivos e pacotes, com *snippets*.
   **O Tab completa** por padrão: aperte Tab depois de um comando incompleto ou dentro de `\ref{…}`, `\cite{…}` ou
   `\begin{…}`; o ⌃Espaço também sempre funciona.
@@ -116,8 +118,9 @@ um editor que trate isso como o caso normal. Ele tem três objetivos:
   contagem de palavras de cada seção.
 - **Paleta de Comandos** (⇧⌘P) para encontrar e executar qualquer comando pelo nome, e **atalhos de teclado
   editáveis** em **Ajustes › Atalhos**.
-- Realce de sintaxe, números de linha, fechamento automático de pares, fechamento de `\begin`…`\end` e alternância de
-  comentários.
+- Realce de sintaxe, números de linha, fechamento automático de pares (`{ }`, `( )`, `[ ]`, `$ $`, `\( \)`, `\[ \]`),
+  fechamento automático de `\begin{env}` ao digitar `}`, remoção pareada em `Backspace`/`Delete` para pares e
+  ambientes vazios, e alternância de comentários.
 - **Modo Vim** opcional: modos normal, inserção, visual e visual de linha, operadores e objetos de texto (incluindo
   `i$` / `a$` para matemática e `ie` / `ae` para ambientes), `:w :wa :q :make`, busca e substituição. Funciona com
   teclas mortas nos teclados ABNT2 e US-Internacional.

@@ -504,8 +504,9 @@ NavigationSplitView
 │          New Folder, Rename, Duplicate, Move to Trash, Reveal in Finder, Set as Main Document
 │   Outline: ProjectIndex.outline (sections / frames / labels) across files → click jumps;
 │            a small secondary word count trails each section
-│   Symbols: MathSymbolsSidebarView + MathSymbolsCatalog (14 categories, 436 symbols, search, preview footer,
-│            click + NSItemProvider drag onto LaTeXTextView, TeXCore.MathContext auto-wrapping)
+│   Symbols: MathSymbolsSidebarView + MathSymbolsCatalog (15 categories, 470 symbols incl. Linguistic Symbols,
+│            search, preview footer, click + NSItemProvider drag onto LaTeXTextView, TeXCore.MathContext
+│            auto-wrapping + preamble \usepackage auto-import, TeXCore.PairEditing paired deletion & \begin close)
 └─ detail:
     ├─ tab strip (glass pills: icon, name, dirty dot, close; ⌘1…⌘9, ⌃Tab cycling)
     ├─ banners (missing package / file changed on disk / no TeX found): glass

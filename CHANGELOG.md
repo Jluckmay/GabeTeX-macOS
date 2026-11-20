@@ -8,8 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ## [Unreleased]
 
 ### Added
-- Categorized **Math Symbols** panel in the left sidebar (`Σ` toggle button / `⌥⌘3`) with 14 categories (436 symbols across core LaTeX, `amsmath`, `amssymb`, `mathrsfs`, and `gensymb`), search, and live preview footer with package hints.
-- Click-to-insert (with snippet tab stops) and drag-and-drop directly onto any position in `LaTeXTextView`, backed by `TeXCore.MathContext` to automatically wrap symbols in `$...$` or `\[...\]` outside math mode (and merge adjacent single `$` delimiters on consecutive insertions).
+- Categorized **Math Symbols** panel in the left sidebar (`Σ` toggle button / `⌥⌘3`) with 15 categories (470 symbols across core LaTeX, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, `eurosym`, plus a text-mode **Linguistic Symbols** section), search, and live preview footer with package hints.
+- `\log_{}` base-subscript snippet in **Standard Functions** so typing focuses directly inside the logarithm base (`_{}`).
+- Click-to-insert (with snippet tab stops) and drag-and-drop directly onto any position in `LaTeXTextView`, backed by `TeXCore.MathContext` to automatically import missing `\usepackage{...}` declarations into the preamble (including the main document when editing preamble-less included files), wrap math symbols in `$...$` or `\[...\]` outside math mode (merging adjacent single `$` delimiters on consecutive insertions), and insert linguistic symbols raw without math wrappers.
+- Extended auto-pairing for `\( \)` and `\[ \]`, automatic `\begin{env}` closing on `}`, and paired forward/backward deletion (`Backspace` / `Delete`) across `{ }`, `( )`, `[ ]`, `$ $`, `$$ $$`, `\( \)`, `\[ \]`, and `\begin{env}...\end{env}` (`TeXCore.PairEditing`).
 
 ## [1.1.1] — 2026-11-19
 
