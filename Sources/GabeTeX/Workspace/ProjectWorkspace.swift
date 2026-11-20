@@ -53,7 +53,7 @@ struct CompileSignature: Equatable {
 @Observable
 final class ProjectWorkspace {
     enum SidebarMode: String, CaseIterable, Identifiable {
-        case files, outline
+        case files, outline, symbols
         var id: String { rawValue }
     }
 

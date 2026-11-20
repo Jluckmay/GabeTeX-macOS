@@ -47,6 +47,7 @@ extension CommandID {
     static let commandPalette: CommandID = "view.commandPalette"
     static let showFiles: CommandID = "view.showFiles"
     static let showOutline: CommandID = "view.showOutline"
+    static let showMathSymbols: CommandID = "view.showMathSymbols"
     static let documentStatistics: CommandID = "view.documentStatistics"
     static let presentation: CommandID = "view.presentation"
     static let nextTab: CommandID = "view.nextTab"
@@ -250,6 +251,9 @@ extension CommandRegistry {
             AppCommand(id: .showOutline, title: String(localized: "Show Outline"), category: .view,
                        symbol: "list.bullet.indent", defaultShortcut: combo("2", [.command, .option]),
                        isEnabled: hasWorkspace, perform: { $0.inProject { $0.sidebarMode = .outline } }),
+            AppCommand(id: .showMathSymbols, title: String(localized: "Show Math Symbols"), category: .view,
+                       symbol: "sum", defaultShortcut: combo("3", [.command, .option]),
+                       isEnabled: hasWorkspace, perform: { $0.inProject { $0.sidebarMode = .symbols } }),
             AppCommand(id: .documentStatistics, title: String(localized: "Document Statistics…"), category: .view,
                        symbol: "chart.bar.doc.horizontal",
                        keywords: [String(localized: "Word Count"), String(localized: "Pages")],

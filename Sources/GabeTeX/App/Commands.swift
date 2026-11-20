@@ -134,6 +134,7 @@ struct AppCommands: Commands {
             Group {
                 item(.showFiles)
                 item(.showOutline)
+                item(.showMathSymbols)
             }
             Divider()
             Group {

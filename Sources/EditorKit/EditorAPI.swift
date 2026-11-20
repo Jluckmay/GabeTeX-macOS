@@ -117,6 +117,14 @@ public final class EditorController {
                        selection: NSRange(location: selection.location + text.utf16.count, length: 0))
     }
 
+    /// Expands a snippet template (`${1}`, `$0`) at the current selection and focuses the editor.
+    public func insertSnippet(_ text: String) {
+        guard let tv = editor, tv.buffer != nil else { return }
+        let item = CompletionItem(kind: .snippet, label: text, insertText: text)
+        tv.insertCompletion(item, replacing: tv.selectedRange())
+        focus()
+    }
+
     /// Toggles `% ` comments on the selected lines (⌘/).
     public func toggleComment() {
         editor?.toggleComment()
