@@ -42,10 +42,30 @@ func editingChecks() async {
         let (tv4, _) = makeEditor("{}", caret: 1)
         type("}", tv4)
         Check.equal(text(tv4), "{}}")
-        // Backspace in a pair that was not auto-inserted deletes one character.
+        // Backspace in an empty pair deletes both characters cleanly.
         let (tv5, _) = makeEditor("{}", caret: 1)
         tv5.deleteBackward(nil)
-        Check.equal(text(tv5), "}")
+        Check.equal(text(tv5), "")
+
+        // Escaped \( and \[ auto-pair their closers and delete both chars as a pair.
+        let (tv6, _) = makeEditor("\\")
+        type("(", tv6)
+        Check.equal(text(tv6), "\\(\\)", "\\( auto-pairs \\)")
+        tv6.deleteBackward(nil)
+        Check.equal(text(tv6), "", "\\(\\) paired deletion")
+
+        // Typing closing brace of \begin{equation} inserts body + \end{equation} automatically.
+        let (tv7, _) = makeEditor("")
+        type("\\begin{equation}", tv7)
+        Check.equal(text(tv7), "\\begin{equation}\n  \n\\end{equation}", "\\begin{equation} closes on }")
+
+        // Forward delete removes balanced $...$ and \begin...\end pairs.
+        let (tv8, _) = makeEditor("$x$", caret: 0)
+        tv8.deleteForward(nil)
+        Check.equal(text(tv8), "x", "forward delete removes both $ delimiters")
+        tv7.setSelectedRange(NSRange(location: 0, length: 0))
+        tv7.deleteForward(nil)
+        Check.equal(text(tv7), "", "forward delete removes empty environment")
     }
 
     await Check.suite("Auto-pair: math dollars and wrapping") {

@@ -9,6 +9,7 @@ nonisolated struct MathSymbol: Identifiable, Hashable, Sendable {
     let name: String
     let keywords: [String]
     let pkg: String?
+    let textMode: Bool
 
     init(
         _ display: String,
@@ -16,7 +17,8 @@ nonisolated struct MathSymbol: Identifiable, Hashable, Sendable {
         snippet: String? = nil,
         name: String,
         keywords: [String] = [],
-        pkg: String? = nil
+        pkg: String? = nil,
+        textMode: Bool = false
     ) {
         self.id = "\(code)|\(display)"
         self.display = display
@@ -25,6 +27,7 @@ nonisolated struct MathSymbol: Identifiable, Hashable, Sendable {
         self.name = name
         self.keywords = keywords
         self.pkg = pkg
+        self.textMode = textMode
     }
 
     /// Template passed on click (expands tab stops when defined).
@@ -524,7 +527,7 @@ enum MathSymbolsCatalog {
                 MathSymbol("tanh", "\\tanh", name: "hyperbolic tangent"),
                 MathSymbol("coth", "\\coth", name: "hyperbolic cotangent"),
                 MathSymbol("ln", "\\ln", name: "natural logarithm", keywords: ["logaritmo"]),
-                MathSymbol("log", "\\log", name: "logarithm", keywords: ["logaritmo"]),
+                MathSymbol("logₐ", "\\log_{}", snippet: "\\log_{${1}}", name: "logarithm with base", keywords: ["logaritmo", "base", "log"]),
                 MathSymbol("lg", "\\lg", name: "base-2 / common log"),
                 MathSymbol("exp", "\\exp", name: "exponential", keywords: ["exponencial"]),
                 MathSymbol("det", "\\det", name: "determinant", keywords: ["determinante"]),
@@ -574,6 +577,47 @@ enum MathSymbolsCatalog {
                 MathSymbol("𝖲", "\\mathsf{}", snippet: "\\mathsf{${1}}", name: "sans-serif math"),
                 MathSymbol("𝚃", "\\mathtt{}", snippet: "\\mathtt{${1}}", name: "monospace math"),
                 MathSymbol("𝜶", "\\boldsymbol{}", snippet: "\\boldsymbol{${1}}", name: "bold math symbol", pkg: "amsmath"),
+            ]
+        ),
+        MathSymbolCategory(
+            id: "linguistic",
+            titleKey: "Linguistic Symbols",
+            icon: "—",
+            symbols: [
+                MathSymbol("—", "---", name: "em dash", keywords: ["travessão", "dash", "em-dash"], textMode: true),
+                MathSymbol("–", "--", name: "en dash", keywords: ["meia-risca", "intervalo", "en-dash"], textMode: true),
+                MathSymbol("—m", "\\textemdash", name: "text em dash", keywords: ["travessão"], textMode: true),
+                MathSymbol("“”", "``''", snippet: "``${1}''", name: "double quotation marks", keywords: ["aspas duplas", "quotes"], textMode: true),
+                MathSymbol("‘’", "`'", snippet: "`${1}'", name: "single quotation marks", keywords: ["aspas simples", "quotes"], textMode: true),
+                MathSymbol("“", "``", name: "left double quote", keywords: ["aspas abertura"], textMode: true),
+                MathSymbol("”", "''", name: "right double quote", keywords: ["aspas fechamento"], textMode: true),
+                MathSymbol("«»", "\\guillemotleft{}\\guillemotright{}", snippet: "\\guillemotleft ${1}\\guillemotright", name: "guillemets", keywords: ["aspas angulares"], textMode: true),
+                MathSymbol("…", "\\ldots", name: "ellipsis / three dots", keywords: ["três pontos", "reticências"], textMode: true),
+                MathSymbol(":", ":", name: "colon", keywords: ["dois pontos"], textMode: true),
+                MathSymbol(";", ";", name: "semicolon", keywords: ["ponto e vírgula"], textMode: true),
+                MathSymbol("¡", "!`", name: "inverted exclamation mark", keywords: ["exclamação"], textMode: true),
+                MathSymbol("¿", "?`", name: "inverted question mark", keywords: ["interrogação"], textMode: true),
+                MathSymbol("␣", "~", name: "non-breaking space", keywords: ["espaço inseparável"], textMode: true),
+                MathSymbol("§", "\\S", name: "section mark", keywords: ["seção"], textMode: true),
+                MathSymbol("¶", "\\P", name: "pilcrow / paragraph sign", keywords: ["parágrafo"], textMode: true),
+                MathSymbol("º", "\\textordmasculine", name: "masculine ordinal", keywords: ["ordinal", "grau"], textMode: true),
+                MathSymbol("ª", "\\textordfeminine", name: "feminine ordinal", keywords: ["ordinal"], textMode: true),
+                MathSymbol("•", "\\textbullet", name: "bullet point", keywords: ["marcador", "tópico"], textMode: true),
+                MathSymbol("©", "\\copyright", name: "copyright sign", keywords: ["direitos autorais"], textMode: true),
+                MathSymbol("®", "\\textregistered", name: "registered trademark", keywords: ["marca registrada"], textMode: true),
+                MathSymbol("™", "\\texttrademark", name: "trademark sign", keywords: ["marca comercial"], textMode: true),
+                MathSymbol("†", "\\dag", name: "dagger note", keywords: ["nota", "adaga"], textMode: true),
+                MathSymbol("‡", "\\ddag", name: "double dagger note", keywords: ["nota", "dupla adaga"], textMode: true),
+                MathSymbol("$", "\\$", name: "escaped dollar sign", keywords: ["cifrão", "moeda"], textMode: true),
+                MathSymbol("%", "\\%", name: "escaped percent sign", keywords: ["porcentagem"], textMode: true),
+                MathSymbol("&", "\\&", name: "escaped ampersand", keywords: ["e comercial"], textMode: true),
+                MathSymbol("#", "\\#", name: "escaped hash / number sign", keywords: ["cerquilha", "sustenido"], textMode: true),
+                MathSymbol("_", "\\_", name: "escaped underscore", keywords: ["sublinhado"], textMode: true),
+                MathSymbol("£", "\\pounds", name: "pound sterling sign", keywords: ["libra", "moeda"], textMode: true),
+                MathSymbol("€", "\\euro", name: "euro sign", keywords: ["euro", "moeda"], pkg: "eurosym", textMode: true),
+                MathSymbol("\\", "\\textbackslash", name: "text backslash", keywords: ["barra invertida"], textMode: true),
+                MathSymbol("~", "\\textasciitilde", name: "text tilde", keywords: ["til"], textMode: true),
+                MathSymbol("^", "\\textasciicircum", name: "text circumflex", keywords: ["circunflexo"], textMode: true),
             ]
         ),
     ]

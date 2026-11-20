@@ -146,12 +146,46 @@ extension LaTeXTextView {
            autoClosers.contains(caret) {
             autoClosers.removeAll { $0 == caret }
             setSelectedRange(NSRange(location: caret + 1, length: 0))
+            if c == TextScan.closeBrace && configuration.autoCloseEnvironments,
+               let beginPlan = PairEditing.beginAutoClose(in: storage.string, at: caret + 1,
+                                                          indentUnit: configuration.indentUnit, lineEnding: lineEnding) {
+                performEdit([TextEdit(range: NSRange(location: caret + 1, length: 0), text: beginPlan.insert)],
+                            selection: NSRange(location: caret + 1 + beginPlan.caretOffset, length: 0),
+                            actionName: String(localized: "Close Environment"))
+            }
             return true
         }
+        if c == TextScan.closeBrace && selection.length == 0 && configuration.autoCloseEnvironments,
+           !TextScan.isInComment(caret, in: text) {
+            let afterDoc = text.replacingCharacters(in: selection, with: "}")
+            if let beginPlan = PairEditing.beginAutoClose(in: afterDoc, at: caret + 1,
+                                                          indentUnit: configuration.indentUnit, lineEnding: lineEnding) {
+                performEdit([TextEdit(range: selection, text: "}" + beginPlan.insert)],
+                            selection: NSRange(location: caret + 1 + beginPlan.caretOffset, length: 0),
+                            actionName: String(localized: "Close Environment"))
+                return true
+            }
+        }
         guard let closer = Self.pairs[c] else { return false }
-        if TextScan.isEscaped(caret, in: text) { return false }   // \{ \[ \( \$ are literal
         let open = String(utf16CodeUnits: [c], count: 1)
         let close = String(utf16CodeUnits: [closer], count: 1)
+        if TextScan.isEscaped(caret, in: text) {
+            // Escaped `\(` and `\[` auto-pair `\)` and `\]`; `\{` and `\$` stay literal.
+            guard c == TextScan.openParen || c == TextScan.openBracket else { return false }
+            guard !TextScan.isInComment(caret, in: text) else { return false }
+            let escClose = "\\" + close
+            if selection.length > 0 {
+                let selected = text.substring(with: selection)
+                guard !selected.contains("\n"), !selected.contains("\r") else { return false }
+                let wrapped = open + selected + escClose
+                return performEdit([TextEdit(range: selection, text: wrapped)],
+                                   selection: NSRange(location: selection.location + 1, length: selection.length))
+            }
+            if caret < text.length, !TextScan.allowsAutoCloseBefore(text.character(at: caret)) { return false }
+            super.insertText(open + escClose, replacementRange: selection)
+            setSelectedRange(NSRange(location: caret + 1, length: 0))
+            return true
+        }
 
         // Wrap a (single-line) selection.
         if selection.length > 0 {
@@ -187,13 +221,12 @@ extension LaTeXTextView {
         let text = storage.mutableString
         let caret = selection.location
         if selection.length == 0, caret > 0 {
-            // Empty auto-inserted pair: delete both characters.
-            if configuration.autoPairBrackets, caret < text.length, autoClosers.contains(caret),
-               let closer = Self.pairs[text.character(at: caret - 1)], text.character(at: caret) == closer,
-               !TextScan.isEscaped(caret - 1, in: text) {
+            // Paired deletion for `{ }`, `( )`, `[ ]`, `$ $`, `$$ $$`, `\( \)`, `\[ \]`, and `\begin...\end`.
+            if configuration.autoPairBrackets,
+               let plan = PairEditing.findPairedDeletion(in: storage.string, at: caret, forward: false) {
                 autoClosers.removeAll { $0 == caret }
-                setSelectedRange(NSRange(location: caret - 1, length: 2))
-                super.deleteBackward(sender)
+                let edits = plan.ranges.map { TextEdit(range: NSRange(location: $0.from, length: $0.to - $0.from), text: "") }
+                performEdit(edits, selection: NSRange(location: plan.caret, length: 0))
                 return
             }
             // Soft tabs: in leading spaces, delete back to the previous indentation stop.
@@ -217,6 +250,21 @@ extension LaTeXTextView {
             }
         }
         super.deleteBackward(sender)
+    }
+
+    public override func deleteForward(_ sender: Any?) {
+        guard let storage = textStorage, !hasMarkedText(), selectedRanges.count == 1 else {
+            super.deleteForward(sender)
+            return
+        }
+        let selection = selectedRange()
+        if configuration.autoPairBrackets, selection.length == 0, selection.location < storage.length,
+           let plan = PairEditing.findPairedDeletion(in: storage.string, at: selection.location, forward: true) {
+            let edits = plan.ranges.map { TextEdit(range: NSRange(location: $0.from, length: $0.to - $0.from), text: "") }
+            performEdit(edits, selection: NSRange(location: plan.caret, length: 0))
+            return
+        }
+        super.deleteForward(sender)
     }
 
     // MARK: - Enter
@@ -505,10 +553,37 @@ extension LaTeXTextView {
     }
 
     /// Inserts a math symbol snippet replacing `range`, automatically wrapping in `$…$` or
-    /// `\[\n…\n\]` when `range` lies outside math mode.
-    public func insertMathSymbol(_ snippet: String, replacing range: NSRange) {
+    /// `\[\n…\n\]` when `range` lies outside math mode (unless `textMode` is true) and
+    /// importing `package` into the document preamble when missing.
+    public func insertMathSymbol(
+        _ snippet: String,
+        package: String? = nil,
+        textMode: Bool = false,
+        replacing range: NSRange
+    ) {
         guard let storage = textStorage, buffer != nil else { return }
-        let plan = MathContext.prepareSymbolInsertion(snippet, in: storage.string, replacing: range)
+        var r = range.clamped(to: storage.length)
+        if let package,
+           let pkgPlan = MathContext.packageImportPlan(for: package, in: storage.string, lineEnding: lineEnding) {
+            let shifted = NSRange(
+                location: pkgPlan.offset <= r.location ? r.location + pkgPlan.text.utf16.count : r.location,
+                length: r.length
+            )
+            let prevLen = storage.length
+            if performEdit([TextEdit(range: NSRange(location: pkgPlan.offset, length: 0), text: pkgPlan.text)],
+                           selection: shifted,
+                           actionName: String(localized: "Import Package")) {
+                let delta = storage.length - prevLen
+                if pkgPlan.offset <= r.location {
+                    r.location = max(0, min(storage.length, r.location + delta))
+                }
+            }
+        }
+        if textMode {
+            insertCompletion(CompletionItem(kind: .snippet, label: snippet, insertText: snippet), replacing: r)
+            return
+        }
+        let plan = MathContext.prepareSymbolInsertion(snippet, in: storage.string, replacing: r)
         insertCompletion(CompletionItem(kind: .snippet, label: plan.text, insertText: plan.text), replacing: plan.range)
         if plan.moveAfterClosingDollar && snippetSession == nil {
             let cur = selectedRange()

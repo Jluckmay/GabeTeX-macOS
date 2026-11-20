@@ -79,7 +79,10 @@ struct MathSymbolsSidebarView: View {
 
     private func insert(_ symbol: MathSymbol) {
         hovered = symbol
-        workspace.editor.insertMathSymbol(symbol.insertionText)
+        workspace.editor.insertMathSymbol(symbol.insertionText, package: symbol.pkg, textMode: symbol.textMode)
+        if let pkg = symbol.pkg {
+            workspace.ensurePackage(pkg)
+        }
     }
 }
 
@@ -156,7 +159,8 @@ private struct SymbolTile: View {
         }
         .onDrag {
             let provider = NSItemProvider(object: symbol.code as NSString)
-            let data = Data(symbol.insertionText.utf8)
+            let payload = MathSymbolDragPayload(snippet: symbol.insertionText, pkg: symbol.pkg, textMode: symbol.textMode)
+            let data = (try? JSONEncoder().encode(payload)) ?? Data(symbol.insertionText.utf8)
             provider.registerDataRepresentation(
                 forTypeIdentifier: LaTeXTextView.mathSymbolPasteboardType.rawValue,
                 visibility: .ownProcess

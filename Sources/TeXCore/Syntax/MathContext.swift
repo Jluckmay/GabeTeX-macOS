@@ -301,4 +301,119 @@ public enum MathContext {
             moveAfterClosingDollar: false
         )
     }
+
+    public struct PackageImportPlan: Equatable, Sendable {
+        public let offset: Int
+        public let text: String
+
+        public init(offset: Int, text: String) {
+            self.offset = offset
+            self.text = text
+        }
+    }
+
+    private static let packageCmdRegex = try! NSRegularExpression(
+        pattern: #"\\(?:usepackage|RequirePackage)(?:\s*\[[^\]]*\])?\s*\{([^}]+)\}"#
+    )
+    private static let docClassCmdRegex = try! NSRegularExpression(
+        pattern: #"\\documentclass(?:\s*\[[^\]]*\])?\s*\{[^}]+\}"#
+    )
+    private static let beginDocRegex = try! NSRegularExpression(
+        pattern: #"\\begin\s*\{document\}"#
+    )
+
+    private static func stripLineComment(_ line: String) -> String {
+        let units = Array(line.utf16)
+        for i in units.indices where units[i] == 37 && !isEscaped(units, at: i) {
+            return String(decoding: units[0..<i], as: UTF16.self)
+        }
+        return line
+    }
+
+    private static func scanPreamble(_ text: String) -> (
+        hasPreamble: Bool,
+        imported: Set<String>,
+        lastPkgLineEnd: Int?,
+        docClassLineEnd: Int?,
+        beginDocLineStart: Int?
+    ) {
+        var imported = Set<String>()
+        var hasPreamble = false
+        var lastPkgLineEnd: Int?
+        var docClassLineEnd: Int?
+        var beginDocLineStart: Int?
+
+        let ns = text as NSString
+        var offset = 0
+        while offset <= ns.length {
+            let lineRange = ns.lineRange(for: NSRange(location: offset, length: 0))
+            let rawLine = ns.substring(with: lineRange)
+            let uncommented = stripLineComment(rawLine)
+            let uNS = uncommented as NSString
+            let uRange = NSRange(location: 0, length: uNS.length)
+
+            if beginDocRegex.firstMatch(in: uncommented, range: uRange) != nil {
+                hasPreamble = true
+                beginDocLineStart = lineRange.location
+                break
+            }
+            if docClassCmdRegex.firstMatch(in: uncommented, range: uRange) != nil {
+                hasPreamble = true
+                docClassLineEnd = lineRange.location + lineRange.length
+            }
+            let pkgMatches = packageCmdRegex.matches(in: uncommented, range: uRange)
+            if !pkgMatches.isEmpty {
+                hasPreamble = true
+                lastPkgLineEnd = lineRange.location + lineRange.length
+                for match in pkgMatches {
+                    let arg = uNS.substring(with: match.range(at: 1))
+                    for part in arg.split(separator: ",") {
+                        let name = part.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !name.isEmpty { imported.insert(name) }
+                    }
+                }
+            }
+            if lineRange.length == 0 || lineRange.location + lineRange.length >= ns.length { break }
+            offset = lineRange.location + lineRange.length
+        }
+        return (hasPreamble, imported, lastPkgLineEnd, docClassLineEnd, beginDocLineStart)
+    }
+
+    /// True when `packageName` (or a superset like `mathtools`/`amssymb`) is already imported in the preamble.
+    public static func hasPackageImport(_ packageName: String, in text: String) -> Bool {
+        let target = packageName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !target.isEmpty else { return true }
+        let info = scanPreamble(text)
+        if info.imported.contains(target) { return true }
+        if target == "amsmath" && info.imported.contains("mathtools") { return true }
+        if target == "amsfonts" && info.imported.contains("amssymb") { return true }
+        return false
+    }
+
+    /// Plans an insertion of `\usepackage{packageName}` into the preamble, or returns `nil` when
+    /// the document has no preamble or already imports the package.
+    public static func packageImportPlan(
+        for packageName: String,
+        in text: String,
+        lineEnding: String = "\n"
+    ) -> PackageImportPlan? {
+        let target = packageName.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !target.isEmpty else { return nil }
+        let info = scanPreamble(text)
+        guard info.hasPreamble else { return nil }
+        if info.imported.contains(target) { return nil }
+        if target == "amsmath" && info.imported.contains("mathtools") { return nil }
+        if target == "amsfonts" && info.imported.contains("amssymb") { return nil }
+
+        guard let insertAt = info.lastPkgLineEnd ?? info.docClassLineEnd ?? info.beginDocLineStart else {
+            return nil
+        }
+        let ns = text as NSString
+        let needsLeadingEol = insertAt > 0 && ns.character(at: insertAt - 1) != 10
+        let directive = "\\usepackage{\(target)}"
+        return PackageImportPlan(
+            offset: insertAt,
+            text: needsLeadingEol ? "\(lineEnding)\(directive)" : "\(directive)\(lineEnding)"
+        )
+    }
 }

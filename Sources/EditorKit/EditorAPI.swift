@@ -125,10 +125,11 @@ public final class EditorController {
         focus()
     }
 
-    /// Inserts a math symbol snippet at the selection, auto-wrapping in math delimiters when outside math mode.
-    public func insertMathSymbol(_ text: String) {
+    /// Inserts a math symbol snippet at the selection, auto-wrapping in math delimiters when outside math mode
+    /// and auto-importing `package` into the preamble when missing.
+    public func insertMathSymbol(_ text: String, package: String? = nil, textMode: Bool = false) {
         guard let tv = editor, tv.buffer != nil else { return }
-        tv.insertMathSymbol(text, replacing: tv.selectedRange())
+        tv.insertMathSymbol(text, package: package, textMode: textMode, replacing: tv.selectedRange())
         focus()
     }
 

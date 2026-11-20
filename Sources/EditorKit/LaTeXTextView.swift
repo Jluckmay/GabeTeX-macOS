@@ -5,6 +5,18 @@ import VimKit
 /// Completion injection point: (text, caret, project symbols) → what to offer.
 public typealias CompletionProviding = (NSString, Int, ProjectSymbols) -> CompletionResult?
 
+public struct MathSymbolDragPayload: Codable, Sendable {
+    public let snippet: String
+    public let pkg: String?
+    public let textMode: Bool
+
+    public init(snippet: String, pkg: String? = nil, textMode: Bool = false) {
+        self.snippet = snippet
+        self.pkg = pkg
+        self.textMode = textMode
+    }
+}
+
 /// The LaTeX source editor: an `NSTextView` on an explicit **TextKit 1** stack
 /// (`NSTextStorage` → `LaTeXLayoutManager` → `NSTextContainer`). It never touches `textLayoutManager`.
 ///
@@ -768,18 +780,24 @@ public final class LaTeXTextView: NSTextView {
 
     public override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
         let pb = sender.draggingPasteboard
-        let symbolPayload: String? = if let data = pb.data(forType: Self.mathSymbolPasteboardType) {
-            String(data: data, encoding: .utf8)
-        } else {
-            pb.string(forType: Self.mathSymbolPasteboardType)
-        }
-        if let snippet = symbolPayload, let storage = textStorage, buffer != nil {
+        let dataPayload = pb.data(forType: Self.mathSymbolPasteboardType)
+        let stringPayload = pb.string(forType: Self.mathSymbolPasteboardType)
+        if let storage = textStorage, buffer != nil {
             let point = convert(sender.draggingLocation, from: nil)
             let rawIndex = characterIndexForInsertion(at: point)
             let idx = rawIndex == NSNotFound ? storage.length : max(0, min(rawIndex, storage.length))
-            window?.makeFirstResponder(self)
-            insertMathSymbol(snippet, replacing: NSRange(location: idx, length: 0))
-            return true
+            let dropRange = NSRange(location: idx, length: 0)
+            if let data = dataPayload,
+               let decoded = try? JSONDecoder().decode(MathSymbolDragPayload.self, from: data) {
+                window?.makeFirstResponder(self)
+                insertMathSymbol(decoded.snippet, package: decoded.pkg, textMode: decoded.textMode, replacing: dropRange)
+                return true
+            }
+            if let raw = dataPayload.flatMap({ String(data: $0, encoding: .utf8) }) ?? stringPayload {
+                window?.makeFirstResponder(self)
+                insertMathSymbol(raw, replacing: dropRange)
+                return true
+            }
         }
         return super.performDragOperation(sender)
     }

@@ -579,6 +579,45 @@ extension ProjectWorkspace {
         updateWindowEdited()
     }
 
+    /// Ensures `\usepackage{pkg}` is imported in the project's `mainFile` when the active buffer has no preamble.
+    func ensurePackage(_ pkg: String) {
+        let target = pkg.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !target.isEmpty else { return }
+        if let cur = currentBuffer {
+            if MathContext.hasPackageImport(target, in: cur.text)
+                || MathContext.packageImportPlan(for: target, in: cur.text) != nil {
+                return
+            }
+        }
+        guard let mainURL = mainFile else { return }
+        if let mainBuffer = buffers[mainURL] {
+            let eol = mainBuffer.text.contains("\r\n") ? "\r\n" : "\n"
+            guard let plan = MathContext.packageImportPlan(for: target, in: mainBuffer.text, lineEnding: eol) else {
+                return
+            }
+            mainBuffer.textStorage.beginEditing()
+            mainBuffer.textStorage.replaceCharacters(in: NSRange(location: plan.offset, length: 0), with: plan.text)
+            mainBuffer.textStorage.endEditing()
+            mainBuffer.noteEdit()
+            afterTextReplaced(mainBuffer)
+            return
+        }
+        if let loaded = try? TextFileIO.read(mainURL) {
+            let eol = loaded.text.contains("\r\n") ? "\r\n" : "\n"
+            guard let plan = MathContext.packageImportPlan(for: target, in: loaded.text, lineEnding: eol) else {
+                return
+            }
+            let ns = loaded.text as NSString
+            let updated = ns.replacingCharacters(in: NSRange(location: plan.offset, length: 0), with: plan.text)
+            if let newState = try? TextFileIO.write(updated, to: mainURL, format: loaded.format) {
+                diskStates[mainURL] = newState
+                formats[mainURL] = loaded.format
+                scheduleIndexRefresh()
+                scheduleLiveCompile()
+            }
+        }
+    }
+
     // MARK: Session
 
     func persistSession() {
