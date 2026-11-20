@@ -499,11 +499,13 @@ for about 0.6 s with no selection. It scrolls only if the target is off-screen a
 ### Project window layout
 ```
 NavigationSplitView
-├─ sidebar: [Files | Outline] segmented
+├─ sidebar: [Σ] [Files | Outline]
 │   Files: tree (folders first, SF Symbol per type, ★ main file, dirty dot); context menu: New File,
 │          New Folder, Rename, Duplicate, Move to Trash, Reveal in Finder, Set as Main Document
 │   Outline: ProjectIndex.outline (sections / frames / labels) across files → click jumps;
 │            a small secondary word count trails each section
+│   Symbols: MathSymbolsSidebarView + MathSymbolsCatalog (14 categories, 436 symbols, search, preview footer,
+│            click + NSItemProvider drag onto LaTeXTextView, TeXCore.MathContext auto-wrapping)
 └─ detail:
     ├─ tab strip (glass pills: icon, name, dirty dot, close; ⌘1…⌘9, ⌃Tab cycling)
     ├─ banners (missing package / file changed on disk / no TeX found): glass

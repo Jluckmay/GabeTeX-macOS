@@ -100,6 +100,10 @@ wanted an editor that treats that as the normal case. It has three goals:
   reloads keep your slide. See the [presentation keys](#during-a-presentation).
 
 ### Writing
+- **Math Symbols table** in the left sidebar (`Σ` button / `⌥⌘3`): 14 categories (436 LaTeX symbols across core
+  LaTeX, `amsmath`, `amssymb`, `mathrsfs`, and `gensymb`), live search, package preview footer, click-to-insert with
+  snippet tab stops, drag-and-drop directly onto any position in the editor, and automatic `$...$` / `\[...\]`
+  delimiter wrapping outside math mode (merging adjacent single `$` delimiters on consecutive insertions).
 - Autocomplete for commands, environments, `\ref` / `\cite` keys, file names and packages, with snippets.
   **Tab completes** by default: press Tab after a partial command or inside `\ref{…}`, `\cite{…}` or `\begin{…}`;
   ⌃Space always works too.
@@ -185,7 +189,7 @@ If you would rather not trust a binary, read the code and [build it yourself](#b
 
    Use `% !TEX program = xelatex` (or `lualatex`) at the top of `main.tex` to pick the engine. GabeTeX also finds
    the root document by itself, and you can pin one with **Build › Set as Main Document**.
-3. **Move around.** Switch the sidebar between **Files** and **Outline**, press **⌘P** to open any file by name, and
+3. **Move around.** Switch the sidebar between **Files**, **Outline**, and **Math Symbols** (`Σ`), press **⌘P** to open any file by name, and
    ⌘-click an `\input{…}` or a `\ref{…}` to follow it.
 4. **Just write.** The PDF updates in the background as you type. Problems are underlined in the editor and
    listed in the Issues panel (⇧⌘M). Press **⌘B** to save everything and export the PDF next to `main.tex`.
@@ -212,7 +216,7 @@ If you would rather not trust a binary, read the code and [build it yourself](#b
 | Open the file of `\input{…}` / go to the `\label` of a `\ref{…}` | ⌘-click the argument |
 | Next / previous issue | ⌘' / ⇧⌘' |
 | Show / hide the PDF · Issues panel | ⌥⌘P · ⇧⌘M |
-| Files / Outline in the sidebar | ⌥⌘1 / ⌥⌘2 |
+| Files / Outline / Math Symbols in the sidebar | ⌥⌘1 / ⌥⌘2 / ⌥⌘3 |
 | Toggle comment on the selected lines | ⌘/ |
 | Indent / outdent | ⌘] / ⌘[ |
 | Autocomplete | Tab after a completable prefix *(on by default)* · ⌃Space · automatic after typing `\` |

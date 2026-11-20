@@ -103,6 +103,11 @@ um editor que trate isso como o caso normal. Ele tem três objetivos:
   [teclas da apresentação](#durante-uma-apresentação).
 
 ### Escrita
+- **Tabela de Símbolos Matemáticos** na barra lateral esquerda (botão `Σ` / `⌥⌘3`): 14 categorias (436 símbolos LaTeX
+  padrão, `amsmath`, `amssymb`, `mathrsfs` e `gensymb`), busca em tempo real, rodapé de prévia com pacote requerido,
+  inserção por clique com *tab stops*, arrastar e soltar (drag-and-drop) em qualquer posição do editor e inserção
+  automática de delimitadores `$...$` / `\[...\]` fora do modo matemático (fundindo `$` simples adjacentes em cliques
+  consecutivos).
 - Autocompletar para comandos, ambientes, chaves de `\ref` / `\cite`, nomes de arquivos e pacotes, com *snippets*.
   **O Tab completa** por padrão: aperte Tab depois de um comando incompleto ou dentro de `\ref{…}`, `\cite{…}` ou
   `\begin{…}`; o ⌃Espaço também sempre funciona.
@@ -190,7 +195,7 @@ Se preferir não confiar num binário, leia o código e [compile você mesmo](#c
 
    Use `% !TEX program = xelatex` (ou `lualatex`) no topo do `main.tex` para escolher o motor. O GabeTeX também
    descobre o documento principal sozinho, e você pode fixar um em **Compilação › Definir como Documento Principal**.
-3. **Navegue.** Alterne a barra lateral entre **Arquivos** e **Estrutura**, use **⌘P** para abrir qualquer arquivo pelo
+3. **Navegue.** Alterne a barra lateral entre **Arquivos**, **Estrutura** e **Símbolos Matemáticos** (`Σ`), use **⌘P** para abrir qualquer arquivo pelo
    nome e dê ⌘-clique num `\input{…}` ou num `\ref{…}` para segui-lo.
 4. **Apenas escreva.** O PDF se atualiza em segundo plano enquanto você digita. Os problemas aparecem sublinhados no
    editor e listados no painel de Problemas (⇧⌘M). Use **⌘B** para salvar tudo e exportar o PDF ao lado do `main.tex`.
@@ -217,7 +222,7 @@ Se preferir não confiar num binário, leia o código e [compile você mesmo](#c
 | Abrir o arquivo de um `\input{…}` / ir ao `\label` de um `\ref{…}` | ⌘-clique no argumento |
 | Próximo / anterior problema | ⌘' / ⇧⌘' |
 | Mostrar/ocultar o PDF · painel de Problemas | ⌥⌘P · ⇧⌘M |
-| Arquivos / Estrutura na barra lateral | ⌥⌘1 / ⌥⌘2 |
+| Arquivos / Estrutura / Símbolos Matemáticos na barra lateral | ⌥⌘1 / ⌥⌘2 / ⌥⌘3 |
 | Comentar/descomentar as linhas selecionadas | ⌘/ |
 | Aumentar / diminuir o recuo | ⌘] / ⌘[ |
 | Autocompletar | Tab depois de um trecho completável *(ativado por padrão)* · ⌃Espaço · automático ao digitar `\` |

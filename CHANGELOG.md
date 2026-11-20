@@ -7,6 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+- Categorized **Math Symbols** panel in the left sidebar (`Σ` toggle button / `⌥⌘3`) with 14 categories (436 symbols across core LaTeX, `amsmath`, `amssymb`, `mathrsfs`, and `gensymb`), search, and live preview footer with package hints.
+- Click-to-insert (with snippet tab stops) and drag-and-drop directly onto any position in `LaTeXTextView`, backed by `TeXCore.MathContext` to automatically wrap symbols in `$...$` or `\[...\]` outside math mode (and merge adjacent single `$` delimiters on consecutive insertions).
+
 ## [1.1.1] — 2026-11-19
 
 ### Added
