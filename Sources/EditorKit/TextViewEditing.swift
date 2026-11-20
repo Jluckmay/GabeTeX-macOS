@@ -504,6 +504,19 @@ extension LaTeXTextView {
         scrollRangeToVisible(selectedRange())
     }
 
+    /// Inserts a math symbol snippet replacing `range`, automatically wrapping in `$…$` or
+    /// `\[\n…\n\]` when `range` lies outside math mode.
+    public func insertMathSymbol(_ snippet: String, replacing range: NSRange) {
+        guard let storage = textStorage, buffer != nil else { return }
+        let plan = MathContext.prepareSymbolInsertion(snippet, in: storage.string, replacing: range)
+        insertCompletion(CompletionItem(kind: .snippet, label: plan.text, insertText: plan.text), replacing: plan.range)
+        if plan.moveAfterClosingDollar && snippetSession == nil {
+            let cur = selectedRange()
+            let next = min(storage.length, cur.location + 1)
+            setSelectedRange(NSRange(location: next, length: 0))
+        }
+    }
+
     /// Copies the text of the tab stop being edited into its mirrors. Runs inside the edit that changed
     /// the stop (called from `didChangeText`), so it is reported and undone together with it.
     func syncSnippetMirrors() {

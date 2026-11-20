@@ -15,6 +15,10 @@ public typealias CompletionProviding = (NSString, Int, ProjectSymbols) -> Comple
 ///
 /// Usually embedded through `LaTeXEditorView`; it can also be used directly (e.g. headless checks).
 public final class LaTeXTextView: NSTextView {
+    /// Custom pasteboard type used when dragging symbols from the Math Symbols sidebar so drops carry
+    /// full snippet templates and trigger math-delimiter auto-wrapping.
+    public static let mathSymbolPasteboardType = NSPasteboard.PasteboardType("com.gabetex.math-symbol")
+
     // MARK: Public state
 
     /// The buffer being edited (nil until `attach(_:)`).
@@ -164,6 +168,7 @@ public final class LaTeXTextView: NSTextView {
         displaysLinkToolTips = false
         layoutManager?.allowsNonContiguousLayout = true
         delegate = spellingDelegate
+        registerForDraggedTypes(registeredDraggedTypes + [Self.mathSymbolPasteboardType])
         setAccessibilityLabel(String(localized: "LaTeX source"))
     }
 
@@ -757,6 +762,26 @@ public final class LaTeXTextView: NSTextView {
             revealFlash.cancel()
         }
         super.viewWillMove(toWindow: newWindow)
+    }
+
+    // MARK: - Math symbol drag-and-drop
+
+    public override func performDragOperation(_ sender: any NSDraggingInfo) -> Bool {
+        let pb = sender.draggingPasteboard
+        let symbolPayload: String? = if let data = pb.data(forType: Self.mathSymbolPasteboardType) {
+            String(data: data, encoding: .utf8)
+        } else {
+            pb.string(forType: Self.mathSymbolPasteboardType)
+        }
+        if let snippet = symbolPayload, let storage = textStorage, buffer != nil {
+            let point = convert(sender.draggingLocation, from: nil)
+            let rawIndex = characterIndexForInsertion(at: point)
+            let idx = rawIndex == NSNotFound ? storage.length : max(0, min(rawIndex, storage.length))
+            window?.makeFirstResponder(self)
+            insertMathSymbol(snippet, replacing: NSRange(location: idx, length: 0))
+            return true
+        }
+        return super.performDragOperation(sender)
     }
 }
 

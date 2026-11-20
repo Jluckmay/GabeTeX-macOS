@@ -1,4 +1,5 @@
 import SwiftUI
+import EditorKit
 
 /// Categorized LaTeX math symbols palette in the left sidebar with click and drag-and-drop insertion.
 struct MathSymbolsSidebarView: View {
@@ -78,7 +79,7 @@ struct MathSymbolsSidebarView: View {
 
     private func insert(_ symbol: MathSymbol) {
         hovered = symbol
-        workspace.editor.insertSnippet(symbol.insertionText)
+        workspace.editor.insertMathSymbol(symbol.insertionText)
     }
 }
 
@@ -153,7 +154,18 @@ private struct SymbolTile: View {
         .onHover { inside in
             if inside { onHoverSymbol(symbol) }
         }
-        .draggable(symbol.code) {
+        .onDrag {
+            let provider = NSItemProvider(object: symbol.code as NSString)
+            let data = Data(symbol.insertionText.utf8)
+            provider.registerDataRepresentation(
+                forTypeIdentifier: LaTeXTextView.mathSymbolPasteboardType.rawValue,
+                visibility: .ownProcess
+            ) { completion in
+                completion(data, nil)
+                return nil
+            }
+            return provider
+        } preview: {
             HStack(spacing: 6) {
                 Text(symbol.display)
                 Text(symbol.code)

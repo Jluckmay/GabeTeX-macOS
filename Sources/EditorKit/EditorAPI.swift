@@ -125,6 +125,13 @@ public final class EditorController {
         focus()
     }
 
+    /// Inserts a math symbol snippet at the selection, auto-wrapping in math delimiters when outside math mode.
+    public func insertMathSymbol(_ text: String) {
+        guard let tv = editor, tv.buffer != nil else { return }
+        tv.insertMathSymbol(text, replacing: tv.selectedRange())
+        focus()
+    }
+
     /// Toggles `% ` comments on the selected lines (⌘/).
     public func toggleComment() {
         editor?.toggleComment()
