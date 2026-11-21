@@ -56,7 +56,7 @@ wanted an editor that treats that as the normal case. It has three goals:
 
 ### Projects and navigation
 - Open any folder, or create a project from a template (Article, Article with Sections, Thesis, Beamer
-  Presentation, Math Notes, Problem Set).
+  Presentation, Math Notes, Problem Set, Book, Report, Poster).
 - File tree sidebar, tabs, **Quick Open (⌘P)**, and a **document outline across all included files**.
 - ⌘-click `\input{…}` / `\include{…}` to open the file; ⌘-click `\ref{…}` to jump to its `\label`.
 - Built for one-file-per-section writing: `% !TEX root` and `% !TEX program` magic comments, plus automatic
@@ -102,7 +102,7 @@ wanted an editor that treats that as the normal case. It has three goals:
 ### Writing
 - **Math Symbols table** in the left sidebar (`Σ` button / `⌥⌘3`): 15 categories (470 LaTeX symbols across core
   LaTeX, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, `eurosym`, plus a text-mode **Linguistic Symbols**
-  section), live search, package preview footer, click-to-insert with snippet tab stops (`\log_{}` prefilled with a base
+  section with PDF-style curly serif quotation marks), live search, package preview footer, click-to-insert with snippet tab stops (`\log_{}` prefilled with a base
   subscript), drag-and-drop directly onto any position in the editor, automatic `\usepackage{...}` preamble injection
   (updating the main document when editing preamble-less included files), and automatic `$...$` / `\[...\]` delimiter
   wrapping outside math mode (merging adjacent single `$` delimiters on consecutive insertions and skipping text-mode

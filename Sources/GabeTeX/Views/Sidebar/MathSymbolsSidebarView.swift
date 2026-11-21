@@ -133,6 +133,10 @@ private struct CategorySection: View {
     }
 }
 
+private func isQuoteDisplay(_ display: String) -> Bool {
+    display.contains { "“”‘’".contains($0) }
+}
+
 private struct SymbolTile: View {
     let symbol: MathSymbol
     let onHoverSymbol: (MathSymbol) -> Void
@@ -143,7 +147,12 @@ private struct SymbolTile: View {
             onInsert(symbol)
         } label: {
             Text(symbol.display)
-                .font(symbol.display.count >= 3 ? .caption.monospaced() : .body)
+                .font(
+                    isQuoteDisplay(symbol.display)
+                        ? .system(size: 21, design: .serif)
+                        : (symbol.display.count >= 3 ? .caption.monospaced() : .body)
+                )
+                .padding(.top, isQuoteDisplay(symbol.display) ? 5 : 0)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity, minHeight: 30)
@@ -172,6 +181,7 @@ private struct SymbolTile: View {
         } preview: {
             HStack(spacing: 6) {
                 Text(symbol.display)
+                    .font(isQuoteDisplay(symbol.display) ? .system(size: 20, design: .serif) : .body)
                 Text(symbol.code)
                     .font(.caption.monospaced())
                     .foregroundStyle(Color.accentColor)
@@ -198,7 +208,8 @@ private struct PreviewFooter: View {
     var body: some View {
         HStack(spacing: 8) {
             Text(symbol?.display ?? "α")
-                .font(.title3)
+                .font(isQuoteDisplay(symbol?.display ?? "") ? .system(size: 21, design: .serif) : .title3)
+                .padding(.top, isQuoteDisplay(symbol?.display ?? "") ? 4 : 0)
                 .frame(width: 28, height: 28)
                 .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 6))
 

@@ -56,7 +56,7 @@ um editor que trate isso como o caso normal. Ele tem três objetivos:
 
 ### Projetos e navegação
 - Abra qualquer pasta ou crie um projeto a partir de um template (Artigo, Artigo com Seções, Tese, Apresentação
-  Beamer, Notas de Matemática, Lista de Exercícios).
+  Beamer, Notas de Matemática, Lista de Exercícios, Livro, Relatório e Pôster).
 - Barra lateral com árvore de arquivos, abas, **Quick Open (⌘P)** e uma **estrutura do documento que atravessa todos
   os arquivos incluídos**.
 - ⌘-clique em `\input{…}` / `\include{…}` abre o arquivo; ⌘-clique em `\ref{…}` leva ao `\label` correspondente.
@@ -105,7 +105,7 @@ um editor que trate isso como o caso normal. Ele tem três objetivos:
 ### Escrita
 - **Tabela de Símbolos Matemáticos** na barra lateral esquerda (botão `Σ` / `⌥⌘3`): 15 categorias (470 símbolos LaTeX
   padrão, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, `eurosym` e uma seção de **Símbolos Linguísticos** em
-  modo texto), busca em tempo real, rodapé de prévia com pacote requerido, inserção por clique com *tab stops*
+  modo texto com aspas em serifa estilo PDF), busca em tempo real, rodapé de prévia com pacote requerido, inserção por clique com *tab stops*
   (`\log_{}` com subscrito de base), arrastar e soltar (drag-and-drop) em qualquer posição do editor, importação
   automática de `\usepackage{...}` no preâmbulo (atualizando o documento principal ao editar fragmentos incluídos) e
   delimitação automática `$...$` / `\[...\]` fora do modo matemático (fundindo `$` simples adjacentes em cliques
