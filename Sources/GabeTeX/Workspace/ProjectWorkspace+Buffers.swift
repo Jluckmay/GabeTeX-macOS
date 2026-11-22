@@ -582,7 +582,7 @@ extension ProjectWorkspace {
     /// Ensures `\usepackage{pkg}` is imported in the project's `mainFile` when the active buffer has no preamble.
     func ensurePackage(_ pkg: String) {
         let target = pkg.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !target.isEmpty else { return }
+        guard MathContext.isValidPackageName(target) else { return }
         if let cur = currentBuffer {
             if MathContext.hasPackageImport(target, in: cur.text)
                 || MathContext.packageImportPlan(for: target, in: cur.text) != nil {
@@ -595,9 +595,16 @@ extension ProjectWorkspace {
             guard let plan = MathContext.packageImportPlan(for: target, in: mainBuffer.text, lineEnding: eol) else {
                 return
             }
+            let delta = plan.text.utf16.count
+            if plan.offset <= mainBuffer.savedSelection.location {
+                mainBuffer.savedSelection.location += delta
+            } else if plan.offset < mainBuffer.savedSelection.location + mainBuffer.savedSelection.length {
+                mainBuffer.savedSelection.length += delta
+            }
             mainBuffer.textStorage.beginEditing()
             mainBuffer.textStorage.replaceCharacters(in: NSRange(location: plan.offset, length: 0), with: plan.text)
             mainBuffer.textStorage.endEditing()
+            mainBuffer.undoManager.removeAllActions()
             mainBuffer.noteEdit()
             afterTextReplaced(mainBuffer)
             return

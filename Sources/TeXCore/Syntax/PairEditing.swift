@@ -40,9 +40,6 @@ public enum PairEditing {
     private static let beginEndLineRegex = try! NSRegularExpression(
         pattern: #"\\begin\{([A-Za-z][A-Za-z0-9*]*)\}$"#
     )
-    private static let commandBraceRegex = try! NSRegularExpression(
-        pattern: #"(?:^|[^\\])\\[A-Za-z@]+\*?$"#
-    )
 
     private static func isInsideLineComment(_ units: [UInt16], at idx: Int) -> Bool {
         var lineStart = idx
@@ -284,11 +281,53 @@ public enum PairEditing {
         return nil
     }
 
+    private static func countForwardDoubleDollars(_ units: [UInt16], from: Int) -> Int {
+        var count = 0
+        var i = from
+        while i + 1 < units.count {
+            if units[i] == 37 && !MathContext.isEscaped(units, at: i) {
+                while i < units.count && units[i] != 10 { i += 1 }
+                continue
+            }
+            if units[i] == 36 && units[i + 1] == 36 && !MathContext.isEscaped(units, at: i) {
+                count += 1
+                i += 2
+                continue
+            }
+            i += 1
+        }
+        return count
+    }
+
+    private static func lineCommentBounds(_ units: [UInt16], upTo idx: Int) -> (lineStart: Int, commentStart: Int?) {
+        var ls = max(0, min(idx, units.count))
+        while ls > 0 && units[ls - 1] != 10 { ls -= 1 }
+        var j = ls
+        while j <= min(idx, units.count - 1) {
+            if units[j] == 37 && !MathContext.isEscaped(units, at: j) {
+                return (ls, j)
+            }
+            j += 1
+        }
+        return (ls, nil)
+    }
+
     private static func findBackwardDoubleDollar(_ units: [UInt16], before: Int) -> Int? {
         var i = before - 2
+        var lineStart = units.count + 1
+        var cStart: Int?
         while i >= 0 {
+            if i < lineStart {
+                let bounds = lineCommentBounds(units, upTo: i)
+                lineStart = bounds.lineStart
+                cStart = bounds.commentStart
+            }
+            if let cs = cStart, i >= cs {
+                i -= 1
+                continue
+            }
             if units[i] == 36 && units[i + 1] == 36 && !MathContext.isEscaped(units, at: i)
-                && !isInsideLineComment(units, at: i) && !MathContext.isInMathMode(units, at: i)
+                && !MathContext.isInMathMode(units, at: i)
             {
                 return i
             }
@@ -310,7 +349,11 @@ public enum PairEditing {
                 while i < units.count && units[i] != 10 { i += 1 }
                 continue
             }
-            if c == 36 && !MathContext.isEscaped(units, at: i) && (i + 1 >= units.count || units[i + 1] != 36) {
+            if c == 36 && !MathContext.isEscaped(units, at: i) {
+                if i + 1 < units.count && units[i + 1] == 36 {
+                    i += 2
+                    continue
+                }
                 return i
             }
             i += 1
@@ -320,7 +363,14 @@ public enum PairEditing {
 
     private static func findBackwardSingleDollar(_ units: [UInt16], before: Int) -> Int? {
         var i = before - 1
+        var lineStart = units.count + 1
+        var cStart: Int?
         while i >= 0 {
+            if i < lineStart {
+                let bounds = lineCommentBounds(units, upTo: i)
+                lineStart = bounds.lineStart
+                cStart = bounds.commentStart
+            }
             if units[i] == 10 {
                 var prev = i - 1
                 var onlyBlank = true
@@ -332,8 +382,14 @@ public enum PairEditing {
                     prev -= 1
                 }
                 if prev >= 0 && onlyBlank { return nil }
+                i -= 1
+                continue
             }
-            if units[i] == 36 && !MathContext.isEscaped(units, at: i) && !isInsideLineComment(units, at: i) {
+            if let cs = cStart, i >= cs {
+                i -= 1
+                continue
+            }
+            if units[i] == 36 && !MathContext.isEscaped(units, at: i) {
                 if i > 0 && units[i - 1] == 36 && !MathContext.isEscaped(units, at: i - 1) {
                     i -= 2
                     continue
@@ -350,7 +406,7 @@ public enum PairEditing {
             && !MathContext.isEscaped(units, at: pos - 1) && !isInsideLineComment(units, at: pos - 1)
             && !MathContext.isInMathMode(units, at: pos - 1)
         {
-            if findForwardDoubleDollar(units, from: pos + 1) == nil {
+            if countForwardDoubleDollars(units, from: pos + 1) % 2 == 0 {
                 return DeletionPlan(ranges: [DeletionRange(from: pos - 1, to: pos + 1)], caret: pos - 1)
             }
         }
@@ -360,7 +416,9 @@ public enum PairEditing {
             && !MathContext.isEscaped(units, at: dblStart) && !isInsideLineComment(units, at: dblStart)
         {
             if !MathContext.isInMathMode(units, at: dblStart) {
-                if let close = findForwardDoubleDollar(units, from: dblStart + 2) {
+                if countForwardDoubleDollars(units, from: dblStart + 2) % 2 == 1,
+                   let close = findForwardDoubleDollar(units, from: dblStart + 2)
+                {
                     return DeletionPlan(
                         ranges: mergeRanges(DeletionRange(from: dblStart, to: dblStart + 2), DeletionRange(from: close, to: close + 2)),
                         caret: dblStart
@@ -417,17 +475,87 @@ public enum PairEditing {
         }
     }
 
+    private static let sizedDelimiterCommands: Set<String> = [
+        "left", "right", "middle",
+        "big", "bigl", "bigr", "bigm",
+        "Big", "Bigl", "Bigr", "Bigm",
+        "bigg", "biggl", "biggr", "biggm",
+        "Bigg", "Biggl", "Biggr", "Biggm",
+    ]
+
+    private static func isCommandNameUnit(_ u: UInt16) -> Bool {
+        (u >= 65 && u <= 90) || (u >= 97 && u <= 122) || u == 64
+    }
+
+    private static func commandEndingAt(_ units: [UInt16], endInclusive: Int) -> String? {
+        var j = endInclusive
+        while j >= 0 && isCommandNameUnit(units[j]) { j -= 1 }
+        guard j >= 0 && j < endInclusive && units[j] == 92 && !MathContext.isEscaped(units, at: j) else {
+            return nil
+        }
+        return String(decoding: units[(j + 1)...endInclusive], as: UTF16.self)
+    }
+
+    private static func skipBalancedGroupBackward(_ units: [UInt16], closeIdx: Int, open: UInt16, close: UInt16) -> Int {
+        var depth = 1
+        var i = closeIdx - 1
+        var lineStart = units.count + 1
+        var cStart: Int?
+        while i >= 0 {
+            if i < lineStart {
+                let bounds = lineCommentBounds(units, upTo: i)
+                lineStart = bounds.lineStart
+                cStart = bounds.commentStart
+            }
+            if (cStart.map { i >= $0 } ?? false) || MathContext.isEscaped(units, at: i) {
+                i -= 1
+                continue
+            }
+            let c = units[i]
+            if c == close { depth += 1 }
+            else if c == open {
+                depth -= 1
+                if depth == 0 { return i - 1 }
+            }
+            i -= 1
+        }
+        return -2
+    }
+
     private static func isCommandArgumentBrace(_ units: [UInt16], openIdx: Int) -> Bool {
-        guard openIdx > 0 else { return false }
-        let prefix = String(decoding: units[0..<openIdx], as: UTF16.self)
-        let ns = prefix as NSString
-        return commandBraceRegex.firstMatch(in: prefix, range: NSRange(location: 0, length: ns.length)) != nil
+        var i = openIdx - 1
+        while i >= 0 && (units[i] == 32 || units[i] == 9) { i -= 1 }
+        while i >= 0 {
+            let ch = units[i]
+            if (ch == 125 || ch == 93) && !MathContext.isEscaped(units, at: i) {
+                let opener: UInt16 = ch == 125 ? 123 : 91
+                let next = skipBalancedGroupBackward(units, closeIdx: i, open: opener, close: ch)
+                if next < -1 { return false }
+                i = next
+                while i >= 0 && (units[i] == 32 || units[i] == 9) { i -= 1 }
+                continue
+            }
+            break
+        }
+        if i >= 0 && units[i] == 42 {
+            i -= 1
+            while i >= 0 && (units[i] == 32 || units[i] == 9) { i -= 1 }
+        }
+        return i >= 0 && commandEndingAt(units, endInclusive: i) != nil
+    }
+
+    private static func isSizedDelimiter(_ units: [UInt16], at idx: Int) -> Bool {
+        var i = idx - 1
+        while i >= 0 && (units[i] == 32 || units[i] == 9) { i -= 1 }
+        guard i >= 0, let name = commandEndingAt(units, endInclusive: i) else { return false }
+        return sizedDelimiterCommands.contains(name)
     }
 
     private static func findBracketDeletion(units: [UInt16], pos: Int, forward: Bool) -> DeletionPlan? {
         if pos > 0 && pos < units.count,
            let closer = matchingCloser(for: units[pos - 1]), units[pos] == closer,
-           !MathContext.isEscaped(units, at: pos - 1), !isInsideLineComment(units, at: pos - 1)
+           !MathContext.isEscaped(units, at: pos - 1), !isInsideLineComment(units, at: pos - 1),
+           (units[pos - 1] == 123 || (!isSizedDelimiter(units, at: pos - 1) && !isSizedDelimiter(units, at: pos)))
         {
             return DeletionPlan(ranges: [DeletionRange(from: pos - 1, to: pos + 1)], caret: pos - 1)
         }
@@ -438,6 +566,7 @@ public enum PairEditing {
 
         let ch = units[idx]
         if let closeChar = matchingCloser(for: ch) {
+            if ch != 123 && isSizedDelimiter(units, at: idx) { return nil }
             var depth = 1
             var i = idx + 1
             while i < units.count {
@@ -455,6 +584,7 @@ public enum PairEditing {
                     depth -= 1
                     if depth == 0 {
                         if ch == 123 && i > idx + 1 && isCommandArgumentBrace(units, openIdx: idx) { return nil }
+                        if ch != 123 && isSizedDelimiter(units, at: i) { return nil }
                         return DeletionPlan(
                             ranges: mergeRanges(DeletionRange(from: idx, to: idx + 1), DeletionRange(from: i, to: i + 1)),
                             caret: idx
@@ -467,10 +597,18 @@ public enum PairEditing {
         }
 
         if let openChar = matchingOpener(for: ch) {
+            if ch != 125 && isSizedDelimiter(units, at: idx) { return nil }
             var depth = 1
             var i = idx - 1
+            var lineStart = units.count + 1
+            var cStart: Int?
             while i >= 0 {
-                if isInsideLineComment(units, at: i) || MathContext.isEscaped(units, at: i) {
+                if i < lineStart {
+                    let bounds = lineCommentBounds(units, upTo: i)
+                    lineStart = bounds.lineStart
+                    cStart = bounds.commentStart
+                }
+                if (cStart.map { i >= $0 } ?? false) || MathContext.isEscaped(units, at: i) {
                     i -= 1
                     continue
                 }
@@ -480,6 +618,7 @@ public enum PairEditing {
                     depth -= 1
                     if depth == 0 {
                         if openChar == 123 && i + 1 < idx && isCommandArgumentBrace(units, openIdx: i) { return nil }
+                        if openChar != 123 && isSizedDelimiter(units, at: i) { return nil }
                         return DeletionPlan(
                             ranges: mergeRanges(DeletionRange(from: i, to: i + 1), DeletionRange(from: idx, to: idx + 1)),
                             caret: i + 1 == idx ? i : idx - 1

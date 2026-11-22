@@ -738,10 +738,9 @@
 "Connect to Zotero’s local API to browse your library and export citations as BibTeX. Save the .bib file in your project and reference it with \\bibliography{zotero} or \\addbibresource{zotero.bib}." = "Conecte-se à API local do Zotero para navegar pela sua biblioteca e exportar citações como BibTeX. Salve o arquivo .bib na pasta do seu projeto e referencie-o com \\bibliography{zotero} ou \\addbibresource{zotero.bib}.";
 
 /* ===== Math Symbols ===== */
-"Math Symbols" = "Símbolos Matemáticos";
 "Show Math Symbols" = "Mostrar Símbolos Matemáticos";
 "Search math symbols…" = "Buscar símbolos matemáticos…";
-"Clear search" = "Limpar busca";
+"Import Package" = "Importar Pacote";
 "No matching symbols" = "Nenhum símbolo encontrado";
 "Try another LaTeX command or symbol name." = "Tente outro comando LaTeX ou nome de símbolo.";
 "Click to insert at cursor or drag into the editor." = "Clique para inserir no cursor ou arraste para o editor.";

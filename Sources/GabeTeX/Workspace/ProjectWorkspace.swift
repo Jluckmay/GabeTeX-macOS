@@ -302,6 +302,7 @@ final class ProjectWorkspace {
         preview.onSyncClick = { [weak self] click in self?.syncFromPDF(click) }
         // Source → PDF: ⌘-click on text and the editor's “Show in PDF” context-menu item.
         editor.onShowInPDF = { [weak self] position, word in self?.showInPDF(position: position, editorWord: word) }
+        editor.onRequirePackage = { [weak self] pkg in self?.ensurePackage(pkg) }
 
         packages.managerProvider = { [weak self] in await self?.packageManager() }
         packages.onInstalled = { [weak self] in self?.startCompile(.live, force: true) }

@@ -212,6 +212,13 @@ extension LaTeXTextView {
         return true
     }
 
+    private static func isPairDelimiterCode(_ ch: unichar) -> Bool {
+        switch ch {
+        case 123, 125, 40, 41, 91, 93, 36: return true
+        default: return false
+        }
+    }
+
     public override func deleteBackward(_ sender: Any?) {
         guard let storage = textStorage, !hasMarkedText(), selectedRanges.count == 1 else {
             super.deleteBackward(sender)
@@ -223,6 +230,7 @@ extension LaTeXTextView {
         if selection.length == 0, caret > 0 {
             // Paired deletion for `{ }`, `( )`, `[ ]`, `$ $`, `$$ $$`, `\( \)`, `\[ \]`, and `\begin...\end`.
             if configuration.autoPairBrackets,
+               Self.isPairDelimiterCode(text.character(at: caret - 1)),
                let plan = PairEditing.findPairedDeletion(in: storage.string, at: caret, forward: false) {
                 autoClosers.removeAll { $0 == caret }
                 let edits = plan.ranges.map { TextEdit(range: NSRange(location: $0.from, length: $0.to - $0.from), text: "") }
@@ -258,11 +266,14 @@ extension LaTeXTextView {
             return
         }
         let selection = selectedRange()
-        if configuration.autoPairBrackets, selection.length == 0, selection.location < storage.length,
-           let plan = PairEditing.findPairedDeletion(in: storage.string, at: selection.location, forward: true) {
-            let edits = plan.ranges.map { TextEdit(range: NSRange(location: $0.from, length: $0.to - $0.from), text: "") }
-            performEdit(edits, selection: NSRange(location: plan.caret, length: 0))
-            return
+        if configuration.autoPairBrackets, selection.length == 0, selection.location < storage.length {
+            let nextCode = storage.mutableString.character(at: selection.location)
+            if (Self.isPairDelimiterCode(nextCode) || nextCode == 92),
+               let plan = PairEditing.findPairedDeletion(in: storage.string, at: selection.location, forward: true) {
+                let edits = plan.ranges.map { TextEdit(range: NSRange(location: $0.from, length: $0.to - $0.from), text: "") }
+                performEdit(edits, selection: NSRange(location: plan.caret, length: 0))
+                return
+            }
         }
         super.deleteForward(sender)
     }
@@ -563,19 +574,28 @@ extension LaTeXTextView {
     ) {
         guard let storage = textStorage, buffer != nil else { return }
         var r = range.clamped(to: storage.length)
-        if let package,
-           let pkgPlan = MathContext.packageImportPlan(for: package, in: storage.string, lineEnding: lineEnding) {
-            let shifted = NSRange(
-                location: pkgPlan.offset <= r.location ? r.location + pkgPlan.text.utf16.count : r.location,
-                length: r.length
-            )
-            let prevLen = storage.length
-            if performEdit([TextEdit(range: NSRange(location: pkgPlan.offset, length: 0), text: pkgPlan.text)],
-                           selection: shifted,
-                           actionName: String(localized: "Import Package")) {
-                let delta = storage.length - prevLen
-                if pkgPlan.offset <= r.location {
-                    r.location = max(0, min(storage.length, r.location + delta))
+        if let rawPackage = package {
+            let targetPkg = rawPackage.trimmingCharacters(in: .whitespacesAndNewlines)
+            if MathContext.isValidPackageName(targetPkg) {
+                let currentText = storage.string
+                if let pkgPlan = MathContext.packageImportPlan(for: targetPkg, in: currentText, lineEnding: lineEnding) {
+                    if pkgPlan.offset <= r.location || pkgPlan.offset >= r.end {
+                        let shifted = NSRange(
+                            location: pkgPlan.offset <= r.location ? r.location + pkgPlan.text.utf16.count : r.location,
+                            length: r.length
+                        )
+                        let prevLen = storage.length
+                        if performEdit([TextEdit(range: NSRange(location: pkgPlan.offset, length: 0), text: pkgPlan.text)],
+                                       selection: shifted,
+                                       actionName: String(localized: "Import Package")) {
+                            let delta = storage.length - prevLen
+                            if pkgPlan.offset <= r.location {
+                                r.location = max(0, min(storage.length, r.location + delta))
+                            }
+                        }
+                    }
+                } else if !MathContext.hasPackageImport(targetPkg, in: currentText) {
+                    controller?.onRequirePackage?(targetPkg)
                 }
             }
         }

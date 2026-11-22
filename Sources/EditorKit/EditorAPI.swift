@@ -31,6 +31,8 @@ public final class EditorController {
     /// itself (AppKit's right-click may select the word under the pointer, as in any text view). The word is `word(at:)` of that position — the word containing it or ending right at it,
     /// nil when there is none. The context-menu item only exists while this handler is set.
     @ObservationIgnored public var onShowInPDF: ((SourcePosition, String?) -> Void)?
+    /// Called when inserting a math symbol requiring `package` into a file without a local preamble.
+    @ObservationIgnored public var onRequirePackage: ((String) -> Void)?
 
     /// The live text view (set by the editor implementation).
     @ObservationIgnored public internal(set) weak var textView: NSTextView?

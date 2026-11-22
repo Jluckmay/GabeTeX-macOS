@@ -4,6 +4,7 @@ import EditorKit
 /// Categorized LaTeX math symbols palette in the left sidebar with click and drag-and-drop insertion.
 struct MathSymbolsSidebarView: View {
     @Environment(ProjectWorkspace.self) private var workspace
+    @Environment(AppSettings.self) private var settings
     @LocalState private var searchText = ""
     @LocalState private var collapsed: Set<String> = []
     @LocalState private var hovered: MathSymbol?
@@ -13,12 +14,14 @@ struct MathSymbolsSidebarView: View {
     var body: some View {
         let categories = MathSymbolsCatalog.filtered(query: searchText)
         let searching = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let accent = settings.accentSwiftUIColor
 
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 10) {
                 ForEach(categories) { category in
                     CategorySection(
                         category: category,
+                        accentColor: accent,
                         isExpanded: searching || !collapsed.contains(category.id),
                         toggle: {
                             guard !searching else { return }
@@ -73,21 +76,19 @@ struct MathSymbolsSidebarView: View {
             .padding(.bottom, 6)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            PreviewFooter(symbol: hovered)
+            PreviewFooter(symbol: hovered, accentColor: accent)
         }
     }
 
     private func insert(_ symbol: MathSymbol) {
         hovered = symbol
         workspace.editor.insertMathSymbol(symbol.insertionText, package: symbol.pkg, textMode: symbol.textMode)
-        if let pkg = symbol.pkg {
-            workspace.ensurePackage(pkg)
-        }
     }
 }
 
 private struct CategorySection: View {
     let category: MathSymbolCategory
+    let accentColor: Color
     let isExpanded: Bool
     let toggle: () -> Void
     let columns: [GridItem]
@@ -104,7 +105,7 @@ private struct CategorySection: View {
                         .rotationEffect(.degrees(isExpanded ? 90 : 0))
                     Text(category.icon)
                         .font(.caption.weight(.semibold))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(accentColor)
                         .frame(width: 18)
                     Text(LocalizedStringKey(category.titleKey))
                         .font(.caption.weight(.semibold))
@@ -124,7 +125,7 @@ private struct CategorySection: View {
             if isExpanded {
                 LazyVGrid(columns: columns, spacing: 4) {
                     ForEach(category.symbols) { symbol in
-                        SymbolTile(symbol: symbol, onHoverSymbol: onHoverSymbol, onInsert: onInsert)
+                        SymbolTile(symbol: symbol, accentColor: accentColor, onHoverSymbol: onHoverSymbol, onInsert: onInsert)
                     }
                 }
                 .padding(.bottom, 2)
@@ -139,6 +140,7 @@ private func isQuoteDisplay(_ display: String) -> Bool {
 
 private struct SymbolTile: View {
     let symbol: MathSymbol
+    let accentColor: Color
     let onHoverSymbol: (MathSymbol) -> Void
     let onInsert: (MathSymbol) -> Void
 
@@ -184,7 +186,7 @@ private struct SymbolTile: View {
                     .font(isQuoteDisplay(symbol.display) ? .system(size: 20, design: .serif) : .body)
                 Text(symbol.code)
                     .font(.caption.monospaced())
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(accentColor)
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
@@ -204,11 +206,14 @@ private struct SymbolTile: View {
 
 private struct PreviewFooter: View {
     let symbol: MathSymbol?
+    let accentColor: Color
 
     var body: some View {
         HStack(spacing: 8) {
             Text(symbol?.display ?? "α")
                 .font(isQuoteDisplay(symbol?.display ?? "") ? .system(size: 21, design: .serif) : .title3)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .padding(.top, isQuoteDisplay(symbol?.display ?? "") ? 4 : 0)
                 .frame(width: 28, height: 28)
                 .background(.quaternary.opacity(0.55), in: RoundedRectangle(cornerRadius: 6))
@@ -217,7 +222,7 @@ private struct PreviewFooter: View {
                 HStack(spacing: 6) {
                     Text(symbol?.code ?? "\\alpha")
                         .font(.caption.monospaced().weight(.semibold))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(accentColor)
                         .lineLimit(1)
                     if let pkg = symbol?.pkg {
                         Text("\\usepackage{\(pkg)}")

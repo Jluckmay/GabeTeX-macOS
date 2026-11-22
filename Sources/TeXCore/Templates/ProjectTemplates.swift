@@ -81,7 +81,7 @@ public enum ProjectTemplates {
                 "chapters/chapter-2.tex": bookChaptersChapter2,
                 "chapters/chapter-3.tex": bookChaptersChapter3,
                 "chapters/appendix-a.tex": bookChaptersAppendixA,
-                "figures/README.txt": bookFigures-README,
+                "figures/README.txt": bookFiguresReadme,
             ]
         ),
         ProjectTemplate(
@@ -619,7 +619,7 @@ Wrap up the story here.
 Supplementary material goes in the appendix.
 """#
 
-    private static let bookFigures-README = #"""
+    private static let bookFiguresReadme = #"""
 Put the figure files of this book in this folder, for example figures/plot.pdf, and include them with
 \includegraphics[width=0.8\linewidth]{figures/plot}
 """#

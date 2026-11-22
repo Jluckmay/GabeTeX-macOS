@@ -208,4 +208,24 @@ func editingChecks() async {
         tv3.toggleComment()
         Check.equal(text(tv3), "no space", "a bare % is removed too")
     }
+
+    await Check.suite("Math symbols insertion & subfile callback") {
+        let (tv, _) = makeEditor("\\documentclass{article}\n\\begin{document}\nhi\n\\end{document}")
+        let hiPos = utf16Length("\\documentclass{article}\n\\begin{document}\n")
+        tv.insertMathSymbol("\\mathbb{R}", package: "amssymb", replacing: NSRange(location: hiPos, length: 0))
+        Check.expect(text(tv).contains("\\usepackage{amssymb}\n\\begin{document}\n$\\mathbb{R}$hi"))
+
+        let sub = "\\section{Intro}\n"
+        let (subTv, _) = makeEditor(sub, caret: utf16Length(sub))
+        let controller = EditorController()
+        var requestedPkg: String?
+        controller.onRequirePackage = { pkg in requestedPkg = pkg }
+        controller.bind(to: subTv)
+        subTv.insertMathSymbol("\\mathscr{F}", package: "mathrsfs", replacing: NSRange(location: utf16Length(sub), length: 0))
+        Check.equal(requestedPkg, "mathrsfs", "subfile invokes onRequirePackage")
+        Check.expect(text(subTv).hasSuffix("$\\mathscr{F}$"))
+
+        subTv.insertMathSymbol("``${1}''", package: nil, textMode: true, replacing: NSRange(location: utf16Length(text(subTv)), length: 0))
+        Check.expect(text(subTv).hasSuffix("$\\mathscr{F}$``''"), "textMode skips math wrapping")
+    }
 }

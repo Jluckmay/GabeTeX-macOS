@@ -5,7 +5,7 @@ import VimKit
 /// Completion injection point: (text, caret, project symbols) → what to offer.
 public typealias CompletionProviding = (NSString, Int, ProjectSymbols) -> CompletionResult?
 
-public struct MathSymbolDragPayload: Codable, Sendable {
+public nonisolated struct MathSymbolDragPayload: Codable, Sendable {
     public let snippet: String
     public let pkg: String?
     public let textMode: Bool
@@ -782,18 +782,23 @@ public final class LaTeXTextView: NSTextView {
         let pb = sender.draggingPasteboard
         let dataPayload = pb.data(forType: Self.mathSymbolPasteboardType)
         let stringPayload = pb.string(forType: Self.mathSymbolPasteboardType)
-        if let storage = textStorage, buffer != nil {
+        if isEditable, let storage = textStorage, buffer != nil {
             let point = convert(sender.draggingLocation, from: nil)
             let rawIndex = characterIndexForInsertion(at: point)
             let idx = rawIndex == NSNotFound ? storage.length : max(0, min(rawIndex, storage.length))
             let dropRange = NSRange(location: idx, length: 0)
-            if let data = dataPayload,
+            if let data = dataPayload, data.count <= 8192,
                let decoded = try? JSONDecoder().decode(MathSymbolDragPayload.self, from: data) {
+                let validPkg = decoded.pkg.flatMap { raw -> String? in
+                    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                    return MathContext.isValidPackageName(trimmed) ? trimmed : nil
+                }
                 window?.makeFirstResponder(self)
-                insertMathSymbol(decoded.snippet, package: decoded.pkg, textMode: decoded.textMode, replacing: dropRange)
+                insertMathSymbol(decoded.snippet, package: validPkg, textMode: decoded.textMode, replacing: dropRange)
                 return true
             }
-            if let raw = dataPayload.flatMap({ String(data: $0, encoding: .utf8) }) ?? stringPayload {
+            if let raw = dataPayload.filter({ $0.count <= 4096 }).flatMap({ String(data: $0, encoding: .utf8) }) ?? stringPayload,
+               raw.utf8.count <= 4096 {
                 window?.makeFirstResponder(self)
                 insertMathSymbol(raw, replacing: dropRange)
                 return true

@@ -48,4 +48,31 @@ func runModelChecks() async {
             Check.expect(index.files.count >= 1)
         }
     }
+
+    await Check.suite("MathContext & PairEditing") {
+        Check.expect(MathContext.isInMathMode("a $x + y$ b", at: 5))
+        Check.expect(!MathContext.isInMathMode("a $x + y$ b", at: 1))
+        Check.expect(!MathContext.isInMathMode("Cost \\$5", at: 8))
+
+        let wrap = MathContext.prepareSymbolInsertion("\\alpha", in: "Hello world", replacing: NSRange(location: 6, length: 0))
+        Check.equal(wrap.text, "$\\alpha$")
+        let mergeLeft = MathContext.prepareSymbolInsertion("\\alpha", in: "Hello $x$", replacing: NSRange(location: 6, length: 0))
+        Check.equal(mergeLeft.range, NSRange(location: 7, length: 0))
+        Check.equal(mergeLeft.text, "\\alpha ")
+
+        Check.expect(!MathContext.hasPackageImport("bad}\n\\input{x}%", in: "\\usepackage{amsmath}\n\\begin{document}"))
+        Check.expect(MathContext.packageImportPlan(for: "bad}\n\\input{x}%", in: "\\documentclass{article}\n\\begin{document}") == nil)
+
+        let sameLinePlan = MathContext.packageImportPlan(for: "amssymb", in: "\\documentclass{article}\\begin{document}")
+        Check.equal(sameLinePlan, MathContext.PackageImportPlan(offset: 23, text: "\n\\usepackage{amssymb}\n"))
+
+        let docWithDisplay = "Hello $$\n\n$$\na^2+b^2=c^2\n$$"
+        Check.equal(
+            PairEditing.findPairedDeletion(in: docWithDisplay, at: 7, forward: false),
+            PairEditing.DeletionPlan(ranges: [PairEditing.DeletionRange(from: 6, to: 8)], caret: 6)
+        )
+        Check.expect(PairEditing.findPairedDeletion(in: "\\usepackage[T1]{fontenc}", at: 24, forward: false) == nil)
+        Check.expect(PairEditing.findPairedDeletion(in: "\\frac{a}{b}", at: 11, forward: false) == nil)
+        Check.expect(PairEditing.findPairedDeletion(in: "\\left( x \\right)", at: 5, forward: false) == nil)
+    }
 }
