@@ -13,7 +13,7 @@ body:
     attributes:
       label: GabeTeX version
       description: Shown in GabeTeX › About GabeTeX.
-      placeholder: "1.1.0"
+      placeholder: "1.1.2"
     validations:
       required: true
   - type: input

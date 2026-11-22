@@ -7,12 +7,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [1.1.2] — 2026-11-21
+
 ### Added
 - Categorized **Math Symbols** panel in the left sidebar (`Σ` toggle button / `⌥⌘3`) with 15 categories (470 symbols across core LaTeX, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, `eurosym`, plus a text-mode **Linguistic Symbols** section with PDF-style curly serif quotation marks), search, and live preview footer with package hints.
 - `\log_{}` base-subscript snippet in **Standard Functions** so typing focuses directly inside the logarithm base (`_{}`).
 - Click-to-insert (with snippet tab stops) and drag-and-drop directly onto any position in `LaTeXTextView`, backed by `TeXCore.MathContext` to automatically import missing `\usepackage{...}` declarations into the preamble (including the main document when editing preamble-less included files), wrap math symbols in `$...$` or `\[...\]` outside math mode (merging adjacent single `$` delimiters on consecutive insertions), and insert linguistic symbols raw without math wrappers.
 - Extended auto-pairing for `\( \)` and `\[ \]`, automatic `\begin{env}` closing on `}`, and paired forward/backward deletion (`Backspace` / `Delete`) across `{ }`, `( )`, `[ ]`, `$ $`, `$$ $$`, `\( \)`, `\[ \]`, and `\begin{env}...\end{env}` (`TeXCore.PairEditing`).
 - New **Book**, **Report**, and **Poster** templates in `TeXCore.ProjectTemplates` (9 built-in templates total, localized in `pt-BR`).
+
+### Fixed
+- **Swift 6.2 & compile fixes**: renamed `bookFigures-README` in `ProjectTemplates.swift` to `bookFiguresReadme` and marked `MathSymbolDragPayload` as `nonisolated` under `defaultIsolation(MainActor.self)`.
+- **Security & drag-and-drop hardening**: enforced strict ASCII package name validation in `MathContext`, enforced `isEditable` / size-capped payloads / package validation on pasteboard drops, wired `EditorController.onRequirePackage` so drag-and-drop into preamble-less subfiles also updates `main.tex`, and safely updated `savedSelection` and undo state when mutating detached `mainBuffer` buffers.
+- **Paired deletion, theme & localization**: fixed empty `$|$` paired deletion when balanced `$$...$$` display math appears below, skipped `$$` in forward single-`$` search, protected optional/multi-argument command braces and `\left(...\right)` sized delimiters, added O(1) delete pre-checks, added separating space before letters inside opening `$`, supported same-line and multi-line preambles, tinted `MathSymbolsSidebarView` with `settings.accentSwiftUIColor`, and added missing `Import Package` PT-BR translation without duplicate keys.
 
 ## [1.1.1] — 2026-11-19
 

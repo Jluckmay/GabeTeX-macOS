@@ -150,11 +150,11 @@ jobs:
 
           ## What's New & Fixes
 
-          - **Tectonic WASM compiler**: optional in-app fallback with serialized builds, SHA-256 integrity checks, isolated `WKWebView` navigation policy, crash recovery, binary asset support, line-number-preserving `\today` local date resolution, and PDF export on build.
-          - **Zotero 7 integration**: local API browser and BibTeX exporter in Settings (`127.0.0.1:23119/api/users/0`, proxy bypass, local networking ATS enabled, All Items & collections support).
-          - **Appearance & localization**: Light/Dark/System themes, custom accent color with 2x Retina dynamic app icon, Brazilian Portuguese (`pt-BR`) localization, configurable auto-save, and multi-language spell checking (`en` / `pt-BR`).
-          - **VoiceOver accessibility**: live `NSAccessibility` announcements for builds, errors, status messages, and banners; cursor position & Vim mode readouts; accessible completion/Quick Open rows; and slide text exposure in Presentation mode.
-          - **Compiler & security hardening**: `latexmk` timeouts (`120s` live / `300s` build), `$max_repeat = 5`, `-no-shell-escape` by default, leading-`-` filename option-injection guard, and blocked launching of untrusted executable/script files.
+          - **Math & Linguistic Symbols sidebar (`Σ` / `⌥⌘3`)**: 15 categories and 470 symbols across core LaTeX, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, and `eurosym`, plus text-mode **Linguistic Symbols** with PDF-style curly serif quotation marks, search, live preview footer, `\log_{}` base-subscript snippet, click-to-insert, and drag-and-drop onto any position in `LaTeXTextView`.
+          - **Context-aware delimiters & `\usepackage` auto-import**: automatically wraps symbols in `$...$` or `\[...\]` outside math mode (merging adjacent single `$` delimiters cleanly and skipping text-mode linguistic symbols) and inserts missing `\usepackage{...}` declarations into the preamble (including updating `main.tex` from preamble-less included files on click or drop).
+          - **Smart auto-pairing & paired deletion**: extends auto-pairing with `\( \)` / `\[ \]` and automatic `\begin{env}...\end{env}` closing on `}`, plus paired forward/backward deletion protecting command arguments and `\left(...\right)` delimiters.
+          - **More project templates**: added **Book**, **Report**, and **Poster** in `TeXCore.ProjectTemplates` (9 built-in templates localized in EN and `pt-BR`).
+          - **Swift 6.2, security & polish fixes**: strict package-name validation, `isEditable` / capped / validated drag-and-drop payloads, safe detached `mainBuffer` updates, custom accent color tinting in `MathSymbolsSidebarView`, and PT-BR localization cleanup alongside all v1.1.1 Tectonic WASM, Zotero 7, VoiceOver, and compiler security improvements.
 
           ## Artifacts
 
@@ -181,11 +181,11 @@ jobs:
 
           ## Novidades e Correções
 
-          - **Compilador Tectonic WASM**: opção de fallback embutida com compilações serializadas, verificação de integridade SHA-256, política de navegação isolada no `WKWebView`, recuperação de falhas, suporte a ativos binários, data local correta em `\today` preservando números de linha e exportação do PDF ao compilar.
-          - **Integração com Zotero 7**: navegador da API local e exportador BibTeX nas Configurações (`127.0.0.1:23119/api/users/0`, bypass de proxy, ATS local habilitado, suporte a Todos os Itens e coleções).
-          - **Aparência e idioma**: temas Claro/Escuro/Sistema, cor de destaque personalizada com ícone Retina 2x dinâmico, tradução para Português do Brasil (`pt-BR`), salvamento automático configurável e corretor ortográfico em `en` / `pt-BR`.
-          - **Acessibilidade VoiceOver**: anúncios automáticos via `NSAccessibility` para compilações, erros, mensagens de status e banners; leitura de posição do cursor e modo Vim; linhas acessíveis no autocompletar e Quick Open; e exposição de texto dos slides no Modo Apresentação.
-          - **Compilador e segurança**: timeouts do `latexmk` (`120s` ao vivo / `300s` build), `$max_repeat = 5`, `-no-shell-escape` por padrão, proteção contra injeção de opções em nomes de arquivo iniciados por `-` e bloqueio de execução de arquivos executáveis/scripts não confiáveis.
+          - **Tabela de Símbolos Matemáticos e Linguísticos (`Σ` / `⌥⌘3`)**: 15 categorias e 470 símbolos (LaTeX padrão, `amsmath`, `amssymb`, `mathrsfs`, `gensymb`, `mathdots`, `eurosym` e **Símbolos Linguísticos** em modo texto com aspas curvas em serifa estilo PDF), busca em tempo real, rodapé de prévia com pacotes, `\log_{}` com subscrito de base, inserção por clique e arrastar e soltar direto no `LaTeXTextView`.
+          - **Delimitadores automáticos e importação de `\usepackage`**: envolve símbolos automaticamente em `$...$` ou `\[...\]` fora do modo matemático (unindo `$` simples adjacentes sem criar `$$` e preservando modo texto para símbolos linguísticos) e importa pacotes faltantes no preâmbulo (atualizando `main.tex` ao editar fragmentos incluídos via clique ou drag-and-drop).
+          - **Fechamento automático e remoção pareada**: fecha `\( \)`, `\[ \]` e `\begin{env}...\end{env}` ao digitar `}`, além de remoção pareada em `Backspace`/`Delete` protegendo argumentos de comandos e delimitadores `\left(...\right)`.
+          - **Novos modelos de projeto**: adicionados **Livro**, **Relatório** e **Pôster** em `TeXCore.ProjectTemplates` (9 modelos embutidos em inglês e português do Brasil).
+          - **Swift 6.2, segurança e refinamentos**: validação estrita de nomes de pacote em `MathContext`, verificação de `isEditable`/tamanho/pacote em drops no editor, atualização segura de seleção/desfazer em `mainBuffer`, cor de destaque personalizada em `MathSymbolsSidebarView` e tradução de `Import Package` no `pt-BR.lproj` junto a todas as melhorias de Tectonic WASM, Zotero 7, VoiceOver e compilador da v1.1.1.
 
           ## Artefatos
 

@@ -27,7 +27,7 @@ struct TeXSettingsView: View {
 
     private var programSection: some View {
         Section("Program") {
-            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.1"
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.1.2"
             LabeledContent("Program version") {
                 Text(version).font(.system(.body, design: .monospaced))
             }
